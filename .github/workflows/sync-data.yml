@@ -1,0 +1,44 @@
+name: Sync weather data
+
+on:
+  schedule:
+    - cron: "0 * * * *" # a cada hora — ajuste conforme a frequência do seu ESP32
+  workflow_dispatch: {} # permite disparar manualmente pela aba Actions
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Run ETL
+        env:
+          THINGSPEAK_CHANNEL_ID: ${{ secrets.THINGSPEAK_CHANNEL_ID }}
+          THINGSPEAK_READ_API_KEY: ${{ secrets.THINGSPEAK_READ_API_KEY }}
+        run: python scripts/sync_data.py
+
+      - name: Commit CSVs atualizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "chore: sincroniza dados da estação [skip ci]"
+          git push
+
+      - name: Avisa o backend para invalidar o cache
+        if: ${{ secrets.BACKEND_REFRESH_URL != '' }}
+        run: |
+          curl -X POST "${{ secrets.BACKEND_REFRESH_URL }}/api/refresh" \
+            -H "X-Refresh-Token: ${{ secrets.BACKEND_REFRESH_TOKEN }}" \
+            --fail --silent --show-error || echo "Refresh falhou, será pego no próximo ciclo do scheduler"

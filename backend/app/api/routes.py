@@ -1,0 +1,70 @@
+from datetime import date
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+
+from app.application.use_cases import (
+    GetDailySummary,
+    GetHistoricalReadings,
+    GetLatestReading,
+)
+from app.config import settings
+from app.domain.models import DailySummary, MetricType, WeatherReading
+from app.infrastructure.csv_repository import CSVRepository
+from app.infrastructure.thingspeak_client import ThingSpeakClient
+
+router = APIRouter()
+
+
+def get_cache(request: Request):
+    return request.app.state.data_cache
+
+
+@router.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
+
+
+@router.get("/readings/latest", response_model=WeatherReading | None)
+async def get_latest() -> WeatherReading | None:
+    use_case = GetLatestReading(ThingSpeakClient())
+    return await use_case.execute()
+
+
+@router.get("/readings/daily-summary", response_model=list[DailySummary])
+async def get_daily_summary(
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    cache=Depends(get_cache),
+) -> list[DailySummary]:
+    use_case = GetDailySummary(cache)
+    return await use_case.execute(start, end)
+
+
+@router.get("/readings/history", response_model=list[WeatherReading])
+async def get_history(
+    start: date = Query(...),
+    end: date = Query(...),
+    metric: MetricType | None = Query(default=None),
+) -> list[WeatherReading]:
+    if (end - start).days > 92:
+        raise HTTPException(status_code=400, detail="Intervalo máximo de 92 dias")
+
+    use_case = GetHistoricalReadings(CSVRepository())
+    return await use_case.execute(start, end, metric)
+
+
+@router.post("/refresh")
+async def refresh_cache(
+    request: Request,
+    x_refresh_token: str = Header(default=""),
+    cache=Depends(get_cache),
+) -> dict:
+    """
+    Chamado pelo workflow do GitHub Actions logo após commitar novos CSVs,
+    para invalidar o cache sem esperar o próximo ciclo do scheduler.
+    """
+    if x_refresh_token != settings.refresh_token:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    await cache.refresh()
+    return {"status": "cache atualizado", "rows": len(cache.daily_summary)}
