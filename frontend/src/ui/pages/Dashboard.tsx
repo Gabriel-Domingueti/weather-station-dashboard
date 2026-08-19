@@ -3,6 +3,7 @@ import { CurrentConditionsCard } from "@/ui/components/CurrentConditionsCard";
 import { DateRangeFilter } from "@/ui/components/DateRangeFilter";
 import { MetricSelector } from "@/ui/components/MetricSelector";
 import { WeatherChart } from "@/ui/components/WeatherChart";
+import { useLatestReading } from "@/application/hooks/useLatestReading";
 import { useHistoricalData } from "@/application/hooks/useHistoricalData";
 import type { DateRange, MetricType } from "@/domain/types";
 
@@ -21,12 +22,20 @@ export function Dashboard() {
   const [range, setRange] = useState<DateRange>(last7Days());
   const [metric, setMetric] = useState<MetricType>("temperature");
 
+  const { data: latestData } = useLatestReading();
   const { data, isLoading, isError } = useHistoricalData(range, metric);
+
+  const lastUpdated = latestData
+    ? new Date(latestData.timestamp).toLocaleString("pt-BR")
+    : null;
 
   return (
     <main className="dashboard">
-      <header>
+      <header className="dashboard-header">
         <h1>Estação Meteorológica</h1>
+        {lastUpdated && (
+          <span className="header-timestamp">Atualizado: {lastUpdated}</span>
+        )}
       </header>
 
       <CurrentConditionsCard />
@@ -36,8 +45,8 @@ export function Dashboard() {
         <MetricSelector value={metric} onChange={setMetric} />
       </section>
 
-      {isLoading && <p>Carregando histórico...</p>}
-      {isError && <p>Não foi possível carregar o histórico.</p>}
+      {isLoading && <p className="status-message">Carregando histórico…</p>}
+      {isError && <p className="status-message status-message--error">Não foi possível carregar o histórico.</p>}
       {data && <WeatherChart data={data} metric={metric} />}
     </main>
   );

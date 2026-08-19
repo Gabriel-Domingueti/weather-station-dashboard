@@ -17,6 +17,7 @@ export function MetricSelector({ value, onChange }: Props) {
       {OPTIONS.map((option) => (
         <button
           key={option.value}
+          data-metric={option.value}
           className={option.value === value ? "active" : ""}
           onClick={() => onChange(option.value)}
         >

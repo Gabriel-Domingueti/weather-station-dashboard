@@ -1,85 +1,280 @@
+/* ─── Design Tokens ─────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap");
+
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
+  /* palette */
+  --color-bg: #12181f;
+  --color-surface: #1b232c;
+  --color-border: #2a343f;
+  --color-text-primary: #edf1f5;
+  --color-text-secondary: #8fa0af;
+  --color-temperature: #e8983d;
+  --color-humidity: #3fb8c4;
+  --color-pressure: #7c7fe0;
+  --color-alert: #d9564b;
+
+  /* typography */
+  --font-heading: "Barlow Semi Condensed", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* radii */
+  --radius-card: 8px;
+  --radius-pill: 4px;
+
+  color-scheme: dark;
+}
+
+/* ─── Reset & Base ──────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #0f1115;
-  color: #e6e6e6;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Dashboard Layout ──────────────────────────────────── */
 
 .dashboard {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 28px;
 }
+
+/* ─── Header ────────────────────────────────────────────── */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+}
+
+.dashboard-header .header-timestamp {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+/* ─── Card ──────────────────────────────────────────────── */
 
 .card {
-  background: #1a1d24;
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px;
 }
 
-.metrics-row {
+/* ─── Gauge Grid (Current Conditions) ───────────────────── */
+
+.gauge-grid {
   display: flex;
-  gap: 24px;
-  margin: 12px 0;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
 }
 
-.metric {
+@media (max-width: 600px) {
+  .gauge-grid {
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+}
+
+/* ─── GaugeDial ─────────────────────────────────────────── */
+
+.gauge-dial {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.metric-label {
-  font-size: 0.8rem;
-  opacity: 0.7;
+.gauge-dial svg {
+  display: block;
 }
 
-.metric-value {
-  font-size: 1.6rem;
-  font-weight: 600;
+.gauge-dial__track {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 5;
 }
 
-.timestamp {
-  font-size: 0.8rem;
-  opacity: 0.6;
+.gauge-dial__progress {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
 }
+
+.gauge-dial__value {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.gauge-dial__label {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-transform: lowercase;
+}
+
+/* ─── Filters Row ───────────────────────────────────────── */
 
 .filters {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
+
+/* ─── Date Range Filter ─────────────────────────────────── */
 
 .date-range-filter {
   display: flex;
-  gap: 12px;
+  gap: 16px;
 }
 
 .date-range-filter label {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.date-range-filter input[type="date"] {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
   font-size: 0.8rem;
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.date-range-filter input[type="date"]:focus {
+  border-color: var(--color-text-secondary);
+}
+
+/* Dark calendar picker icon */
+.date-range-filter input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+/* ─── Metric Selector (Pill Buttons) ────────────────────── */
+
+.metric-selector {
+  display: flex;
+  gap: 6px;
 }
 
 .metric-selector button {
-  background: #1a1d24;
-  border: 1px solid #333;
-  color: #e6e6e6;
-  padding: 6px 12px;
-  margin-left: 4px;
-  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.metric-selector button.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
+/* Temperature pill */
+.metric-selector button[data-metric="temperature"].active {
+  background: rgba(232, 152, 61, 0.15);
+  color: var(--color-temperature);
+  border-color: rgba(232, 152, 61, 0.3);
+}
+
+/* Humidity pill */
+.metric-selector button[data-metric="humidity"].active {
+  background: rgba(63, 184, 196, 0.15);
+  color: var(--color-humidity);
+  border-color: rgba(63, 184, 196, 0.3);
+}
+
+/* Pressure pill */
+.metric-selector button[data-metric="pressure"].active {
+  background: rgba(124, 127, 224, 0.15);
+  color: var(--color-pressure);
+  border-color: rgba(124, 127, 224, 0.3);
+}
+
+/* ─── Weather Chart ─────────────────────────────────────── */
+
+.chart-card h3 {
+  margin: 0 0 16px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+/* Override Recharts text defaults */
+.recharts-cartesian-axis-tick-value {
+  font-family: var(--font-mono) !important;
+  font-size: 0.7rem !important;
+  fill: var(--color-text-secondary) !important;
+}
+
+.recharts-default-tooltip {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-pill) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.8rem !important;
+}
+
+/* ─── Status Messages ───────────────────────────────────── */
+
+.status-message {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.status-message--error {
+  color: var(--color-alert);
 }
