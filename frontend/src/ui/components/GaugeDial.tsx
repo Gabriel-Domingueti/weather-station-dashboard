@@ -5,6 +5,7 @@ interface GaugeDialProps {
   unit: string;
   color: string;
   label: string;
+  trendIndicator?: React.ReactNode;
 }
 
 const SIZE = 120;
@@ -15,7 +16,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const ARC_FRACTION = 0.75;
 const ARC_LENGTH = CIRCUMFERENCE * ARC_FRACTION;
 
-export function GaugeDial({ value, min, max, unit, color, label }: GaugeDialProps) {
+export function GaugeDial({ value, min, max, unit, color, label, trendIndicator }: GaugeDialProps) {
   const clampedValue = value !== null ? Math.max(min, Math.min(max, value)) : min;
   const ratio = (clampedValue - min) / (max - min);
   const progressLength = ARC_LENGTH * ratio;
@@ -55,6 +56,7 @@ export function GaugeDial({ value, min, max, unit, color, label }: GaugeDialProp
 
       <span className="gauge-dial__value" style={{ color }}>
         {value !== null ? `${value.toFixed(1)} ${unit}` : "—"}
+        {trendIndicator}
       </span>
 
       <span className="gauge-dial__label">{label}</span>

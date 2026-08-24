@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness
+from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend
 from datetime import datetime, timedelta, timezone
 from app.domain.models import MetricType
 from app.core.cache import DataCache
@@ -132,3 +132,77 @@ def test_compute_staleness():
     is_stale, mins = compute_staleness(edge_time, now, 30)
     assert is_stale is True
     assert mins == 30.0
+
+
+def test_compute_trend():
+    # stable
+    assert compute_trend(25.0, 24.6, 0.5) == "stable"
+    assert compute_trend(24.6, 25.0, 0.5) == "stable"
+    assert compute_trend(25.0, 25.0, 0.5) == "stable"
+    # exato no limiar (stable)
+    assert compute_trend(25.5, 25.0, 0.5) == "stable"
+    
+    # rising
+    assert compute_trend(25.6, 25.0, 0.5) == "rising"
+    # falling
+    assert compute_trend(24.4, 25.0, 0.5) == "falling"
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_records():
+    # Mes de agosto
+    daily_summary_data = [
+        {
+            "date": "2026-08-01",
+            "temperature_avg": 24.0, "temperature_min": 22.0, "temperature_max": 26.0,
+            "humidity_avg": 58.0, "humidity_min": 55.0, "humidity_max": 61.0,
+            "pressure_avg": 1012.0, "pressure_min": 1010.0, "pressure_max": 1014.0,
+        },
+        {
+            "date": "2026-08-02",
+            "temperature_avg": 20.5, "temperature_min": 19.0, "temperature_max": 28.0, # max temp aqui
+            "humidity_avg": 66.0, "humidity_min": 40.0, "humidity_max": 69.0, # min hum aqui
+            "pressure_avg": 1015.5, "pressure_min": 1014.0, "pressure_max": 1017.0,
+        },
+        {
+            "date": "2026-08-03",
+            "temperature_avg": 23.0, "temperature_min": 10.0, "temperature_max": 23.0, # min temp aqui
+            "humidity_avg": 50.0, "humidity_min": 50.0, "humidity_max": 80.0, # max hum aqui
+            "pressure_avg": None, "pressure_min": None, "pressure_max": None,
+        },
+        {
+            "date": "2026-09-01", # Outro mês
+            "temperature_avg": 30.0, "temperature_min": 30.0, "temperature_max": 30.0,
+            "humidity_avg": 90.0, "humidity_min": 90.0, "humidity_max": 90.0,
+            "pressure_avg": 1000.0, "pressure_min": 1000.0, "pressure_max": 1000.0,
+        }
+    ]
+    
+    class MockCSVRepository:
+        async def fetch_daily_summary(self):
+            return pd.DataFrame(daily_summary_data)
+            
+    cache = DataCache(repository=MockCSVRepository())
+    await cache.refresh()
+    
+    use_case = GetMonthlyRecords(cache)
+    
+    # 1. Normal data
+    records_august = await use_case.execute(2026, 8)
+    assert records_august.month == "2026-08"
+    assert records_august.temperature.max_value == 28.0
+    assert records_august.temperature.max_date == "2026-08-02"
+    assert records_august.temperature.min_value == 10.0
+    assert records_august.temperature.min_date == "2026-08-03"
+    
+    assert records_august.humidity.max_value == 80.0
+    assert records_august.humidity.max_date == "2026-08-03"
+    assert records_august.humidity.min_value == 40.0
+    assert records_august.humidity.min_date == "2026-08-02"
+    
+    # 2. No data for month
+    records_july = await use_case.execute(2026, 7)
+    assert records_july.month == "2026-07"
+    assert records_july.temperature.max_value is None
+    assert records_july.temperature.max_date is None
+    assert records_july.humidity.min_value is None

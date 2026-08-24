@@ -1,5 +1,7 @@
 import { useLatestReading } from "@/application/hooks/useLatestReading";
+import { useTrend } from "@/application/hooks/useTrend";
 import { GaugeDial } from "@/ui/components/GaugeDial";
+import { TrendArrow } from "@/ui/components/TrendArrow";
 
 interface GaugeConfig {
   key: "temperature" | "humidity" | "pressure";
@@ -39,6 +41,7 @@ const GAUGES: GaugeConfig[] = [
 
 export function CurrentConditionsCard() {
   const { data, isLoading, isError } = useLatestReading();
+  const { data: trendData } = useTrend();
 
   if (isLoading) return <div className="card"><p className="status-message">Carregando condições atuais…</p></div>;
   if (isError || !data) return <div className="card"><p className="status-message status-message--error">Sem dados recentes da estação.</p></div>;
@@ -70,6 +73,7 @@ export function CurrentConditionsCard() {
           unit={g.unit}
           color={g.color}
           label={g.label}
+          trendIndicator={trendData ? <TrendArrow trend={trendData[g.key]} /> : undefined}
         />
       ))}
       </section>

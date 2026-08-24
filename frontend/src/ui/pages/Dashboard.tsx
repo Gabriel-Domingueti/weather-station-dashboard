@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CurrentConditionsCard } from "@/ui/components/CurrentConditionsCard";
+import { MonthlyRecordsCard } from "@/ui/components/MonthlyRecordsCard";
 import { DateRangeFilter } from "@/ui/components/DateRangeFilter";
 import { MetricSelector } from "@/ui/components/MetricSelector";
 import { WeatherChart } from "@/ui/components/WeatherChart";
@@ -39,6 +40,7 @@ export function Dashboard() {
       </header>
 
       <CurrentConditionsCard />
+      <MonthlyRecordsCard />
 
       <section className="filters">
         <DateRangeFilter value={range} onChange={setRange} />

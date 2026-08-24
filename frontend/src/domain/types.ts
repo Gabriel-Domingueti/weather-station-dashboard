@@ -30,3 +30,23 @@ export interface LatestReadingResponse {
   is_stale: boolean;
   minutes_since_reading: number | null;
 }
+
+export interface MetricRecord {
+  max_value: number | null;
+  max_date: string | null;
+  min_value: number | null;
+  min_date: string | null;
+}
+
+export interface MonthlyRecords {
+  month: string;
+  temperature: MetricRecord;
+  humidity: MetricRecord;
+  pressure: MetricRecord;
+}
+
+export interface TrendInfo {
+  temperature: "rising" | "falling" | "stable";
+  humidity: "rising" | "falling" | "stable";
+  pressure: "rising" | "falling" | "stable";
+}

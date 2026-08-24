@@ -7,9 +7,11 @@ from app.application.use_cases import (
     GetHistoricalReadings,
     GetLatestReading,
     compute_staleness,
+    GetMonthlyRecords,
+    GetTrend,
 )
 from app.config import settings
-from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse
+from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo
 from app.infrastructure.csv_repository import CSVRepository
 from app.infrastructure.thingspeak_client import ThingSpeakClient
 from datetime import datetime, timezone
@@ -89,3 +91,22 @@ async def refresh_cache(
 
     await cache.refresh()
     return {"status": "cache atualizado", "rows": len(cache.daily_summary)}
+
+
+@router.get("/readings/monthly-records", response_model=MonthlyRecords)
+async def get_monthly_records(
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None),
+    cache=Depends(get_cache),
+) -> MonthlyRecords:
+    use_case = GetMonthlyRecords(cache)
+    now = datetime.now(timezone.utc)
+    target_year = year if year is not None else now.year
+    target_month = month if month is not None else now.month
+    return await use_case.execute(target_year, target_month)
+
+
+@router.get("/readings/trend", response_model=TrendInfo)
+async def get_trend() -> TrendInfo:
+    use_case = GetTrend(ThingSpeakClient(), CSVRepository())
+    return await use_case.execute()

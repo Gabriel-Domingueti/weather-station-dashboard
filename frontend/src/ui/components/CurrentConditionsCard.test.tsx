@@ -2,10 +2,15 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { CurrentConditionsCard } from "./CurrentConditionsCard";
 import * as hooks from "@/application/hooks/useLatestReading";
+import * as trendHooks from "@/application/hooks/useTrend";
 
 // Mock the component dependencies
 vi.mock("@/application/hooks/useLatestReading", () => ({
   useLatestReading: vi.fn(),
+}));
+
+vi.mock("@/application/hooks/useTrend", () => ({
+  useTrend: vi.fn(),
 }));
 
 vi.mock("@/ui/components/GaugeDial", () => ({
@@ -24,6 +29,8 @@ describe("CurrentConditionsCard", () => {
       isError: false,
     } as any);
 
+    vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
+
     render(<CurrentConditionsCard />);
 
     expect(screen.getByText(/Última leitura há 47 min/i)).toBeInTheDocument();
@@ -40,6 +47,8 @@ describe("CurrentConditionsCard", () => {
       isError: false,
     } as any);
 
+    vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
+
     render(<CurrentConditionsCard />);
 
     expect(screen.getByText(/Sem dados recentes/i)).toBeInTheDocument();
@@ -55,6 +64,8 @@ describe("CurrentConditionsCard", () => {
       isLoading: false,
       isError: false,
     } as any);
+
+    vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
 

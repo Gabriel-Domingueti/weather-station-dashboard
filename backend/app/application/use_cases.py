@@ -3,8 +3,9 @@ from datetime import date
 import pandas as pd
 
 from app.core.cache import DataCache
-from app.domain.models import DailySummary, MetricType, WeatherReading
+from app.domain.models import DailySummary, MetricType, WeatherReading, MonthlyRecords, MetricRecord, TrendInfo
 from app.infrastructure.csv_repository import CSVRepository
+from datetime import datetime, timezone, timedelta
 from app.infrastructure.thingspeak_client import ThingSpeakClient
 
 
@@ -77,3 +78,119 @@ class GetHistoricalReadings:
         df = df.astype(object).where(pd.notnull(df), None)
 
         return [WeatherReading(**row) for row in df.to_dict(orient="records")]
+
+
+def compute_trend(current: float, reference: float, threshold: float = 0.5) -> str:
+    """Retorna 'rising', 'falling' ou 'stable'."""
+    diff = current - reference
+    if abs(diff) <= threshold:
+        return "stable"
+    if diff > 0:
+        return "rising"
+    return "falling"
+
+
+class GetMonthlyRecords:
+    def __init__(self, cache: DataCache) -> None:
+        self._cache = cache
+
+    async def execute(self, year: int, month: int) -> MonthlyRecords:
+        await self._cache.ensure_fresh()
+        df = self._cache.daily_summary
+        
+        month_str = f"{year:04d}-{month:02d}"
+        
+        empty_record = MetricRecord(max_value=None, max_date=None, min_value=None, min_date=None)
+        if df.empty:
+            return MonthlyRecords(month=month_str, temperature=empty_record, humidity=empty_record, pressure=empty_record)
+            
+        df = df.copy()
+        # Filtrar o mês
+        df["date_str"] = df["date"].astype(str)
+        df_month = df[df["date_str"].str.startswith(month_str)]
+        
+        if df_month.empty:
+            return MonthlyRecords(month=month_str, temperature=empty_record, humidity=empty_record, pressure=empty_record)
+            
+        def get_metric_record(metric_prefix: str) -> MetricRecord:
+            max_col = f"{metric_prefix}_max"
+            min_col = f"{metric_prefix}_min"
+            
+            # max
+            valid_max = df_month[pd.notnull(df_month[max_col])]
+            if valid_max.empty:
+                max_val = None
+                max_date = None
+            else:
+                max_idx = valid_max[max_col].idxmax()
+                max_val = valid_max.loc[max_idx, max_col]
+                max_date = valid_max.loc[max_idx, "date_str"]
+                
+            # min
+            valid_min = df_month[pd.notnull(df_month[min_col])]
+            if valid_min.empty:
+                min_val = None
+                min_date = None
+            else:
+                min_idx = valid_min[min_col].idxmin()
+                min_val = valid_min.loc[min_idx, min_col]
+                min_date = valid_min.loc[min_idx, "date_str"]
+                
+            return MetricRecord(
+                max_value=max_val, max_date=max_date,
+                min_value=min_val, min_date=min_date
+            )
+            
+        return MonthlyRecords(
+            month=month_str,
+            temperature=get_metric_record("temperature"),
+            humidity=get_metric_record("humidity"),
+            pressure=get_metric_record("pressure"),
+        )
+
+
+class GetTrend:
+    def __init__(self, thingspeak_client: ThingSpeakClient, repository: CSVRepository) -> None:
+        self._thingspeak = thingspeak_client
+        self._repository = repository
+        
+    async def execute(self) -> TrendInfo:
+        current = await self._thingspeak.get_latest()
+        
+        default_trend = TrendInfo(temperature="stable", humidity="stable", pressure="stable")
+        if not current:
+            return default_trend
+            
+        now = datetime.now(timezone.utc)
+        ref_time_end = now - timedelta(hours=2, minutes=30)
+        ref_time_start = now - timedelta(hours=3, minutes=30)
+        
+        df = await self._repository.fetch_raw_range(ref_time_start.date(), ref_time_end.date())
+        if df.empty:
+            return default_trend
+            
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        # Filtrar o intervalo
+        df_ref = df[(df["timestamp"] >= ref_time_start) & (df["timestamp"] <= ref_time_end)]
+        if df_ref.empty:
+            return default_trend
+            
+        # Pegar a linha mais próxima do centro (3 hours ago)
+        target_time = now - timedelta(hours=3)
+        df_ref = df_ref.copy()
+        df_ref["diff"] = (df_ref["timestamp"] - target_time).abs()
+        closest_idx = df_ref["diff"].idxmin()
+        reference = df_ref.loc[closest_idx]
+        
+        def get_trend_str(metric: str) -> str:
+            curr_val = getattr(current, metric, None)
+            ref_val = reference.get(metric) if pd.notnull(reference.get(metric)) else None
+            if curr_val is None or ref_val is None:
+                return "stable"
+            return compute_trend(curr_val, ref_val)
+            
+        return TrendInfo(
+            temperature=get_trend_str("temperature"),
+            humidity=get_trend_str("humidity"),
+            pressure=get_trend_str("pressure")
+        )

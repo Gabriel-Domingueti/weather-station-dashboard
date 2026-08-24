@@ -38,3 +38,20 @@ class LatestReadingResponse(BaseModel):
     reading: WeatherReading | None
     is_stale: bool
     minutes_since_reading: float | None
+
+class MetricRecord(BaseModel):
+    max_value: float | None
+    max_date: str | None
+    min_value: float | None
+    min_date: str | None
+
+class MonthlyRecords(BaseModel):
+    month: str  # formato "YYYY-MM"
+    temperature: MetricRecord
+    humidity: MetricRecord
+    pressure: MetricRecord
+
+class TrendInfo(BaseModel):
+    temperature: str
+    humidity: str
+    pressure: str
