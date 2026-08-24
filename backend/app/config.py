@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # Cache em memória dos CSVs
     cache_refresh_minutes: int = 30
 
+    stale_threshold_minutes: int = 30
+
     # CORS - origens permitidas a consumir a API (ajuste para o domínio do front em produção)
     cors_origins: list[str] = ["http://localhost:5173"]
 

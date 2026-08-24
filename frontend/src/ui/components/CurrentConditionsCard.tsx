@@ -44,11 +44,27 @@ export function CurrentConditionsCard() {
   if (isError || !data) return <div className="card"><p className="status-message status-message--error">Sem dados recentes da estação.</p></div>;
 
   return (
-    <section className="gauge-grid">
+    <div>
+      {data.is_stale && (
+        <div style={{
+          backgroundColor: "var(--color-alert)",
+          color: "white",
+          padding: "8px 16px",
+          borderRadius: "8px",
+          marginBottom: "16px",
+          textAlign: "center",
+          fontWeight: "bold"
+        }}>
+          {data.minutes_since_reading != null 
+            ? `Última leitura há ${Math.round(data.minutes_since_reading)} min` 
+            : "Sem dados recentes"}
+        </div>
+      )}
+      <section className="gauge-grid">
       {GAUGES.map((g) => (
         <GaugeDial
           key={g.key}
-          value={data[g.key]}
+          value={data.reading?.[g.key] ?? null}
           min={g.min}
           max={g.max}
           unit={g.unit}
@@ -56,6 +72,7 @@ export function CurrentConditionsCard() {
           label={g.label}
         />
       ))}
-    </section>
+      </section>
+    </div>
   );
 }

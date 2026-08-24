@@ -32,3 +32,9 @@ class DailySummary(BaseModel):
     pressure_avg: float | None = None
     pressure_min: float | None = None
     pressure_max: float | None = None
+
+
+class LatestReadingResponse(BaseModel):
+    reading: WeatherReading | None
+    is_stale: bool
+    minutes_since_reading: float | None

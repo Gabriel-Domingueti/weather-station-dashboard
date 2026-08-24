@@ -24,3 +24,9 @@ export interface DateRange {
   start: string; // YYYY-MM-DD
   end: string;
 }
+
+export interface LatestReadingResponse {
+  reading: WeatherReading | null;
+  is_stale: boolean;
+  minutes_since_reading: number | null;
+}

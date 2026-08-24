@@ -6,11 +6,13 @@ from app.application.use_cases import (
     GetDailySummary,
     GetHistoricalReadings,
     GetLatestReading,
+    compute_staleness,
 )
 from app.config import settings
-from app.domain.models import DailySummary, MetricType, WeatherReading
+from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse
 from app.infrastructure.csv_repository import CSVRepository
 from app.infrastructure.thingspeak_client import ThingSpeakClient
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -24,10 +26,29 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-@router.get("/readings/latest", response_model=WeatherReading | None)
-async def get_latest() -> WeatherReading | None:
+@router.get("/readings/latest", response_model=LatestReadingResponse)
+async def get_latest() -> LatestReadingResponse:
     use_case = GetLatestReading(ThingSpeakClient())
-    return await use_case.execute()
+    reading = await use_case.execute()
+    
+    if reading is None:
+        return LatestReadingResponse(
+            reading=None,
+            is_stale=True,
+            minutes_since_reading=None
+        )
+        
+    is_stale, minutes = compute_staleness(
+        reading.timestamp,
+        datetime.now(timezone.utc),
+        settings.stale_threshold_minutes
+    )
+    
+    return LatestReadingResponse(
+        reading=reading,
+        is_stale=is_stale,
+        minutes_since_reading=minutes
+    )
 
 
 @router.get("/readings/daily-summary", response_model=list[DailySummary])

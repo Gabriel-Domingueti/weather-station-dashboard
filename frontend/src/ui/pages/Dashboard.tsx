@@ -25,8 +25,8 @@ export function Dashboard() {
   const { data: latestData } = useLatestReading();
   const { data, isLoading, isError } = useHistoricalData(range, metric);
 
-  const lastUpdated = latestData
-    ? new Date(latestData.timestamp).toLocaleString("pt-BR")
+  const lastUpdated = latestData?.reading?.timestamp
+    ? new Date(latestData.reading.timestamp).toLocaleString("pt-BR")
     : null;
 
   return (

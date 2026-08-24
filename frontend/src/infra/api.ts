@@ -1,12 +1,12 @@
 import axios from "axios";
-import type { DailySummary, DateRange, MetricType, WeatherReading } from "@/domain/types";
+import type { DailySummary, DateRange, MetricType, WeatherReading, LatestReadingResponse } from "@/domain/types";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 export const apiClient = axios.create({ baseURL });
 
-export async function fetchLatestReading(): Promise<WeatherReading | null> {
-  const { data } = await apiClient.get<WeatherReading | null>("/readings/latest");
+export async function fetchLatestReading(): Promise<LatestReadingResponse> {
+  const { data } = await apiClient.get<LatestReadingResponse>("/readings/latest");
   return data;
 }
 
