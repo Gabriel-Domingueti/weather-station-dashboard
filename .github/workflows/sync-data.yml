@@ -1,4 +1,4 @@
-name: Sync weather data
+naname: Sync weather data
 
 on:
   schedule:
@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      BACKEND_REFRESH_URL: ${{ secrets.BACKEND_REFRESH_URL }}
+      BACKEND_REFRESH_TOKEN: ${{ secrets.BACKEND_REFRESH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,8 +40,8 @@ jobs:
           git push
 
       - name: Avisa o backend para invalidar o cache
-        if: ${{ secrets.BACKEND_REFRESH_URL != '' }}
+        if: ${{ env.BACKEND_REFRESH_URL != '' }}
         run: |
-          curl -X POST "${{ secrets.BACKEND_REFRESH_URL }}/api/refresh" \
-            -H "X-Refresh-Token: ${{ secrets.BACKEND_REFRESH_TOKEN }}" \
+          curl -X POST "${{ env.BACKEND_REFRESH_URL }}/api/refresh" \
+            -H "X-Refresh-Token: ${{ env.BACKEND_REFRESH_TOKEN }}" \
             --fail --silent --show-error || echo "Refresh falhou, será pego no próximo ciclo do scheduler"
