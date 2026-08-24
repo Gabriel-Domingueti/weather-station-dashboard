@@ -55,7 +55,7 @@ docker compose up --build
 ```bash
 # backend
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 
@@ -69,12 +69,12 @@ npm run dev
 
 Em `Settings > Secrets and variables > Actions`, adicione:
 
-| Secret | Descrição |
-|---|---|
-| `THINGSPEAK_CHANNEL_ID` | ID do canal do ThingSpeak |
-| `THINGSPEAK_READ_API_KEY` | Read API Key (se o canal for privado) |
-| `BACKEND_REFRESH_URL` | URL do backend em produção (opcional) |
-| `BACKEND_REFRESH_TOKEN` | Deve bater com `REFRESH_TOKEN` do backend |
+| Secret                    | Descrição                                 |
+| ------------------------- | ----------------------------------------- |
+| `THINGSPEAK_CHANNEL_ID`   | ID do canal do ThingSpeak                 |
+| `THINGSPEAK_READ_API_KEY` | Read API Key (se o canal for privado)     |
+| `BACKEND_REFRESH_URL`     | URL do backend em produção (opcional)     |
+| `BACKEND_REFRESH_TOKEN`   | Deve bater com `REFRESH_TOKEN` do backend |
 
 ## Deploy
 
