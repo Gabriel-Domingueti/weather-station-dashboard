@@ -46,7 +46,13 @@ def fetch_new_readings(since: datetime | None) -> pd.DataFrame:
         return pd.DataFrame(columns=["timestamp", "temperature", "humidity", "pressure"])
 
     df = pd.DataFrame(feeds).rename(columns=FIELD_MAP)
-    df["timestamp"] = pd.to_datetime(df["created_at"])
+
+    # O ThingSpeak devolve created_at com timezone (UTC, ex: "...Z").
+    # Os timestamps já salvos no CSV são naive (sem timezone). Normaliza
+    # aqui pra naive logo na entrada, senão a comparação com o checkpoint
+    # (`> since`) quebra com "Cannot compare tz-naive and tz-aware".
+    df["timestamp"] = pd.to_datetime(df["created_at"]).dt.tz_localize(None)
+
     columns = ["timestamp", "temperature", "humidity", "pressure"]
     return df[columns].dropna(subset=["timestamp"])
 
