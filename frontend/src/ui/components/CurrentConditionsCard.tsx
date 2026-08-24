@@ -49,18 +49,15 @@ export function CurrentConditionsCard() {
   return (
     <div>
       {data.is_stale && (
-        <div style={{
-          backgroundColor: "var(--color-alert)",
-          color: "white",
-          padding: "8px 16px",
-          borderRadius: "8px",
-          marginBottom: "16px",
-          textAlign: "center",
-          fontWeight: "bold"
-        }}>
-          {data.minutes_since_reading != null 
-            ? `Última leitura há ${Math.round(data.minutes_since_reading)} min` 
+        <div className="stale-badge">
+          {data.minutes_since_reading != null
+            ? `Última leitura há ${Math.round(data.minutes_since_reading)} min`
             : "Sem dados recentes"}
+        </div>
+      )}
+      {trendData?.rain_alert && (
+        <div className="rain-alert-badge">
+          💧 Pressão em queda — possível chuva
         </div>
       )}
       <section className="gauge-grid">

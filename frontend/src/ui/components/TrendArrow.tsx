@@ -13,7 +13,7 @@ export function TrendArrow({ trend }: TrendArrowProps) {
   };
 
   return (
-    <span style={{ color: "var(--color-trend)", marginLeft: "4px", fontSize: "0.8em" }}>
+    <span className="trend-arrow">
       {getIcon()}
     </span>
   );

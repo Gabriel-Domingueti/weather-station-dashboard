@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend
+from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend, compute_rain_alert, GetTrend
 from datetime import datetime, timedelta, timezone
 from app.domain.models import MetricType
 from app.core.cache import DataCache
@@ -147,6 +147,18 @@ def test_compute_trend():
     # falling
     assert compute_trend(24.4, 25.0, 0.5) == "falling"
 
+    assert compute_trend(24.4, 25.0, 0.5) == "falling"
+
+
+def test_compute_rain_alert():
+    # queda de 5 hPa com limiar 3.5 -> True
+    assert compute_rain_alert(-5.0, 3.5) is True
+    # queda de 2 hPa com limiar 3.5 -> False
+    assert compute_rain_alert(-2.0, 3.5) is False
+    # subida de 5 hPa com limiar 3.5 -> False (não dispara em subida)
+    assert compute_rain_alert(5.0, 3.5) is False
+    # queda exatamente no limiar (-3.5 com limiar 3.5) -> decidi inclusive, portanto dispara (True)
+    assert compute_rain_alert(-3.5, 3.5) is True
 
 @pytest.mark.asyncio
 async def test_get_monthly_records():
@@ -206,3 +218,34 @@ async def test_get_monthly_records():
     assert records_july.temperature.max_value is None
     assert records_july.temperature.max_date is None
     assert records_july.humidity.min_value is None
+
+@pytest.mark.asyncio
+async def test_get_trend():
+    from app.domain.models import WeatherReading
+    
+    class MockThingSpeakClient:
+        async def get_latest(self):
+            return WeatherReading(
+                temperature=20.0,
+                humidity=60.0,
+                pressure=1006.5, # Queda de 4 hPa
+                timestamp="2026-08-23T12:00:00Z"
+            )
+            
+    class MockCSVRepository:
+        async def fetch_raw_range(self, start, end):
+            # Simulando o df_ref
+            return pd.DataFrame([
+                {
+                    "temperature": 20.0,
+                    "humidity": 60.0,
+                    "pressure": 1010.5, # Referencia de 3h atras
+                    "timestamp": datetime.now(timezone.utc) - timedelta(hours=3)
+                }
+            ])
+            
+    use_case = GetTrend(MockThingSpeakClient(), MockCSVRepository())
+    trend = await use_case.execute()
+    
+    assert trend.pressure_change_hpa == -4.0
+    assert trend.rain_alert is True

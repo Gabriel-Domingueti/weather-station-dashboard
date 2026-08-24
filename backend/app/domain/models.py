@@ -55,3 +55,5 @@ class TrendInfo(BaseModel):
     temperature: str
     humidity: str
     pressure: str
+    pressure_change_hpa: float | None = None
+    rain_alert: bool = False

@@ -279,3 +279,66 @@ body {
 .status-message--error {
   color: var(--color-alert);
 }
+
+/* ─── Stale Badge ───────────────────────────────────────── */
+
+.stale-badge {
+  background-color: var(--color-alert);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* ─── Rain Alert Badge ──────────────────────────────────── */
+
+.rain-alert-badge {
+  background-color: rgba(124, 127, 224, 0.15);
+  color: var(--color-pressure);
+  border: 1px solid rgba(124, 127, 224, 0.35);
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* ─── Trend Arrow ────────────────────────────────────────── */
+
+.trend-arrow {
+  color: var(--color-trend);
+  margin-left: 4px;
+  font-size: 0.8em;
+}
+
+/* ─── Monthly Records Card ──────────────────────────────── */
+
+.monthly-records-header {
+  margin: 0 0 12px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+.monthly-record {
+  margin-bottom: 12px;
+}
+
+.monthly-record-list {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.monthly-records-card {
+  margin-top: 16px;
+}
+
+.monthly-records-body {
+  margin-top: 12px;
+}

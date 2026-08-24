@@ -49,4 +49,6 @@ export interface TrendInfo {
   temperature: "rising" | "falling" | "stable";
   humidity: "rising" | "falling" | "stable";
   pressure: "rising" | "falling" | "stable";
+  pressure_change_hpa: number | null;
+  rain_alert: boolean;
 }

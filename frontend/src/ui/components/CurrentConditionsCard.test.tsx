@@ -72,4 +72,54 @@ describe("CurrentConditionsCard", () => {
     expect(screen.queryByText(/Sem dados recentes/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Última leitura/i)).not.toBeInTheDocument();
   });
+
+  it("should show rain alert badge when rain_alert is true", () => {
+    vi.spyOn(hooks, "useLatestReading").mockReturnValue({
+      data: {
+        reading: { temperature: 22, humidity: 75, pressure: 1006, timestamp: "2026-08-23" },
+        is_stale: false,
+        minutes_since_reading: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as any);
+
+    vi.spyOn(trendHooks, "useTrend").mockReturnValue({
+      data: {
+        temperature: "stable",
+        humidity: "stable",
+        pressure: "falling",
+        pressure_change_hpa: -4.0,
+        rain_alert: true,
+      },
+    } as any);
+
+    render(<CurrentConditionsCard />);
+    expect(screen.getByText(/Pressão em queda/i)).toBeInTheDocument();
+  });
+
+  it("should not show rain alert badge when rain_alert is false", () => {
+    vi.spyOn(hooks, "useLatestReading").mockReturnValue({
+      data: {
+        reading: { temperature: 25, humidity: 60, pressure: 1015, timestamp: "2026-08-23" },
+        is_stale: false,
+        minutes_since_reading: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as any);
+
+    vi.spyOn(trendHooks, "useTrend").mockReturnValue({
+      data: {
+        temperature: "stable",
+        humidity: "stable",
+        pressure: "stable",
+        pressure_change_hpa: -1.0,
+        rain_alert: false,
+      },
+    } as any);
+
+    render(<CurrentConditionsCard />);
+    expect(screen.queryByText(/Pressão em queda/i)).not.toBeInTheDocument();
+  });
 });

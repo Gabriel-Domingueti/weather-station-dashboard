@@ -90,6 +90,16 @@ def compute_trend(current: float, reference: float, threshold: float = 0.5) -> s
     return "falling"
 
 
+def compute_rain_alert(pressure_change_hpa: float, threshold_hpa: float = 3.5) -> bool:
+    """
+    True se a pressão caiu mais que threshold_hpa no período de
+    referência. Só dispara em queda (valor negativo), nunca em subida.
+    """
+    if pressure_change_hpa > 0:
+        return False
+    return abs(pressure_change_hpa) >= threshold_hpa
+
+
 class GetMonthlyRecords:
     def __init__(self, cache: DataCache) -> None:
         self._cache = cache
@@ -189,8 +199,20 @@ class GetTrend:
                 return "stable"
             return compute_trend(curr_val, ref_val)
             
+        pressure_curr = current.pressure
+        pressure_ref = reference.get("pressure") if pd.notnull(reference.get("pressure")) else None
+        
+        if pressure_curr is not None and pressure_ref is not None:
+            pressure_change = pressure_curr - pressure_ref
+            rain_alert = compute_rain_alert(pressure_change)
+        else:
+            pressure_change = None
+            rain_alert = False
+            
         return TrendInfo(
             temperature=get_trend_str("temperature"),
             humidity=get_trend_str("humidity"),
-            pressure=get_trend_str("pressure")
+            pressure=get_trend_str("pressure"),
+            pressure_change_hpa=pressure_change,
+            rain_alert=rain_alert
         )
