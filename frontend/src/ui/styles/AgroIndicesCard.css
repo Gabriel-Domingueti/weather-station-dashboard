@@ -1,0 +1,44 @@
+.agro-indices-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.agro-indices-card .metrics {
+  display: flex;
+  gap: 2rem;
+}
+
+.agro-indices-card .metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.agro-indices-card .metric .label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.agro-indices-card .metric .value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.provisional-warning {
+  display: flex;
+  gap: 0.5rem;
+  background-color: var(--surface-hover);
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  align-items: flex-start;
+}
+
+.provisional-warning span {
+  font-size: 1.125rem;
+}
+
+.provisional-warning p {
+  margin: 0;
+}

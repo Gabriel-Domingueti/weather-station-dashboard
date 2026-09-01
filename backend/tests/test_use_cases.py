@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend, compute_rain_alert, GetTrend
+from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend, compute_rain_alert, GetTrend, GetAgroIndices
 from datetime import datetime, timedelta, timezone
 from app.domain.models import MetricType
 from app.core.cache import DataCache
@@ -253,3 +253,35 @@ async def test_get_trend():
     
     assert trend.pressure_change_hpa == -4.0
     assert trend.rain_alert is True
+
+@pytest.mark.asyncio
+async def test_get_agro_indices():
+    agro_data = [
+        {"date": "2026-08-01", "gd": 10.0, "gd_acumulado": 10.0, "dmf_hours": 2.5},
+        {"date": "2026-08-02", "gd": 15.0, "gd_acumulado": 25.0, "dmf_hours": 0.0},
+        {"date": "2026-08-03", "gd": 0.0, "gd_acumulado": 25.0, "dmf_hours": None}
+    ]
+
+    class MockCSVRepository:
+        async def fetch_agro_indices(self):
+            return pd.DataFrame(agro_data)
+            
+    class MockEmptyCSVRepository:
+        async def fetch_agro_indices(self):
+            return pd.DataFrame(columns=["date", "gd", "gd_acumulado", "dmf_hours"])
+
+    # Teste com dados e filtros
+    use_case = GetAgroIndices(MockCSVRepository())
+    
+    res_all = await use_case.execute(None, None)
+    assert len(res_all) == 3
+    
+    res_filtered = await use_case.execute(date(2026, 8, 2), date(2026, 8, 3))
+    assert len(res_filtered) == 2
+    assert res_filtered[0].gd == 15.0
+    assert res_filtered[1].dmf_hours is None # Teste NaN para None
+
+    # Teste CSV vazio
+    use_case_empty = GetAgroIndices(MockEmptyCSVRepository())
+    res_empty = await use_case_empty.execute(None, None)
+    assert len(res_empty) == 0

@@ -9,9 +9,10 @@ from app.application.use_cases import (
     compute_staleness,
     GetMonthlyRecords,
     GetTrend,
+    GetAgroIndices,
 )
 from app.config import settings
-from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo
+from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo, AgroIndex
 from app.infrastructure.csv_repository import CSVRepository
 from app.infrastructure.thingspeak_client import ThingSpeakClient
 from datetime import datetime, timezone
@@ -110,3 +111,12 @@ async def get_monthly_records(
 async def get_trend() -> TrendInfo:
     use_case = GetTrend(ThingSpeakClient(), CSVRepository())
     return await use_case.execute()
+
+
+@router.get("/readings/agro-indices", response_model=list[AgroIndex])
+async def get_agro_indices(
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+) -> list[AgroIndex]:
+    use_case = GetAgroIndices(CSVRepository())
+    return await use_case.execute(start, end)

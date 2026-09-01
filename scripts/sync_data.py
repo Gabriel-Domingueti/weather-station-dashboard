@@ -15,11 +15,15 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "backend"))
+from app.domain.agrometeorology import calculate_gd, calculate_dmf_hours
 
 THINGSPEAK_CHANNEL_ID = os.environ["THINGSPEAK_CHANNEL_ID"]
 THINGSPEAK_READ_API_KEY = os.environ.get("THINGSPEAK_READ_API_KEY", "")
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "data" / "raw"
 AGGREGATED_DIR = REPO_ROOT / "data" / "aggregated"
 
@@ -115,6 +119,60 @@ def rebuild_daily_summary() -> None:
     summary.to_csv(AGGREGATED_DIR / "daily_summary.csv", index=False)
     print(f"  daily_summary.csv: {len(summary)} dias")
 
+def calculate_daily_indices() -> None:
+    summary_path = AGGREGATED_DIR / "daily_summary.csv"
+    if not summary_path.exists():
+        return
+
+    summary_df = pd.read_csv(summary_path)
+    if summary_df.empty:
+        return
+
+    # Lê todos os raw readings pra podermos calcular DMF (já que precisamos do delta de tempo)
+    csv_files = sorted(RAW_DIR.glob("*.csv"))
+    if csv_files:
+        all_readings = pd.concat([pd.read_csv(f) for f in csv_files], ignore_index=True)
+        all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True)
+        all_readings["date"] = all_readings["timestamp"].dt.date.astype(str)
+    else:
+        all_readings = pd.DataFrame(columns=["timestamp", "humidity", "date"])
+
+    results = []
+    gd_acumulado = 0.0
+
+    for _, row in summary_df.iterrows():
+        date_str = str(row["date"])
+        
+        # GD
+        t_max = row.get("temperature_max")
+        t_min = row.get("temperature_min")
+        t_max = None if pd.isna(t_max) else float(t_max)
+        t_min = None if pd.isna(t_min) else float(t_min)
+        
+        gd = calculate_gd(t_max, t_min)
+        gd_acumulado += gd
+        
+        # DMF
+        day_readings = all_readings[all_readings["date"] == date_str]
+        
+        dmf_hours = 0.0
+        if not day_readings.empty and not day_readings["humidity"].isna().all():
+            # Drop nans in humidity and format as list of tuples
+            valid_readings = day_readings.dropna(subset=["humidity"])
+            readings_list = list(zip(valid_readings["timestamp"].dt.to_pydatetime(), valid_readings["humidity"]))
+            dmf_hours = calculate_dmf_hours(readings_list)
+        
+        results.append({
+            "date": date_str,
+            "gd": round(gd, 2),
+            "gd_acumulado": round(gd_acumulado, 2),
+            "dmf_hours": round(dmf_hours, 2)
+        })
+
+    indices_df = pd.DataFrame(results)
+    indices_df.to_csv(AGGREGATED_DIR / "agrometeorological_indices.csv", index=False)
+    print(f"  agrometeorological_indices.csv: {len(indices_df)} dias")
+
 
 def main() -> None:
     since = last_checkpoint()
@@ -131,6 +189,7 @@ def main() -> None:
     print(f"{len(new_readings)} leituras novas encontradas.")
     append_to_monthly_csv(new_readings)
     rebuild_daily_summary()
+    calculate_daily_indices()
     print(f"Sincronização concluída em {datetime.now(timezone.utc).isoformat()}")
 
 

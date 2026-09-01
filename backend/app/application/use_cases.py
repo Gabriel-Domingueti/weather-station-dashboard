@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 
 from app.core.cache import DataCache
-from app.domain.models import DailySummary, MetricType, WeatherReading, MonthlyRecords, MetricRecord, TrendInfo
+from app.domain.models import DailySummary, MetricType, WeatherReading, MonthlyRecords, MetricRecord, TrendInfo, AgroIndex
 from app.infrastructure.csv_repository import CSVRepository
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.thingspeak_client import ThingSpeakClient
@@ -216,3 +216,28 @@ class GetTrend:
             pressure_change_hpa=pressure_change,
             rain_alert=rain_alert
         )
+
+class GetAgroIndices:
+    """Use case: retorna os índices agrometeorológicos calculados."""
+
+    def __init__(self, repository: CSVRepository) -> None:
+        self._repository = repository
+
+    async def execute(self, start: date | None, end: date | None) -> list[AgroIndex]:
+        df = await self._repository.fetch_agro_indices()
+
+        if df.empty:
+            return []
+
+        df = df.copy()
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        if start:
+            df = df[df["date"] >= start]
+        if end:
+            df = df[df["date"] <= end]
+
+        df["date"] = df["date"].astype(str)
+
+        df = df.astype(object).where(pd.notnull(df), None)
+
+        return [AgroIndex(**row) for row in df.to_dict(orient="records")]

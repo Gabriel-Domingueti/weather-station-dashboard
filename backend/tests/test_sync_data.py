@@ -118,3 +118,55 @@ def test_last_checkpoint_naive_csv(tmp_path, monkeypatch):
     nova_data = datetime.datetime(2026, 9, 1, 22, 18, 0, tzinfo=datetime.timezone.utc)
     # Não deve lançar TypeError
     assert nova_data > checkpoint
+
+def test_calculate_daily_indices(tmp_path, monkeypatch):
+    import datetime
+    raw_dir = tmp_path / "data" / "raw"
+    agg_dir = tmp_path / "data" / "aggregated"
+    raw_dir.mkdir(parents=True)
+    agg_dir.mkdir(parents=True)
+    
+    monkeypatch.setattr(sync_data, "RAW_DIR", raw_dir)
+    monkeypatch.setattr(sync_data, "AGGREGATED_DIR", agg_dir)
+    
+    # Criar daily_summary.csv mockado
+    summary_data = [
+        {"date": "2026-08-01", "temperature_max": 25.0, "temperature_min": 15.0}, # media 20 -> gd 10
+        {"date": "2026-08-02", "temperature_max": 28.0, "temperature_min": 18.0}, # media 23 -> gd 13
+        {"date": "2026-08-03", "temperature_max": 12.0, "temperature_min": 8.0}   # media 10 -> gd 0
+    ]
+    pd.DataFrame(summary_data).to_csv(agg_dir / "daily_summary.csv", index=False)
+    
+    # Criar arquivo raw (timestamp, humidity) para o dia 2026-08-01
+    raw_data_01 = [
+        {"timestamp": "2026-08-01 10:00:00+00:00", "humidity": 95.0, "temperature": 20, "pressure": 1010},
+        {"timestamp": "2026-08-01 11:00:00+00:00", "humidity": 92.0, "temperature": 22, "pressure": 1010},
+        {"timestamp": "2026-08-01 12:00:00+00:00", "humidity": 80.0, "temperature": 25, "pressure": 1010},
+    ]
+    pd.DataFrame(raw_data_01).to_csv(raw_dir / "2026-08.csv", index=False)
+    
+    sync_data.calculate_daily_indices()
+    
+    indices_file = agg_dir / "agrometeorological_indices.csv"
+    assert indices_file.exists()
+    
+    df_indices = pd.read_csv(indices_file)
+    assert len(df_indices) == 3
+    
+    # Valida GD e Acumulado
+    row1 = df_indices.iloc[0]
+    assert row1["date"] == "2026-08-01"
+    assert row1["gd"] == 10.0
+    assert row1["gd_acumulado"] == 10.0
+    assert row1["dmf_hours"] == 1.0 # 1h do t1-t0
+    
+    row2 = df_indices.iloc[1]
+    assert row2["date"] == "2026-08-02"
+    assert row2["gd"] == 13.0
+    assert row2["gd_acumulado"] == 23.0 # 10 + 13
+    assert row2["dmf_hours"] == 0.0 # Sem raw readings pro dia 02
+    
+    row3 = df_indices.iloc[2]
+    assert row3["date"] == "2026-08-03"
+    assert row3["gd"] == 0.0
+    assert row3["gd_acumulado"] == 23.0 # 23 + 0

@@ -94,3 +94,19 @@ class CSVRepository:
         response.raise_for_status()
         return pd.read_csv(StringIO(response.text))
 
+    async def fetch_agro_indices(self) -> pd.DataFrame:
+        if settings.github_owner != "seu-usuario":
+            url = f"{settings.raw_base_url}/aggregated/agrometeorological_indices.csv"
+            try:
+                return await self._fetch_csv(url)
+            except Exception as e:
+                logger.warning("Falha ao buscar índices do GitHub (%s), tentando arquivo local...", e)
+
+        local_file = self._data_dir / "aggregated" / "agrometeorological_indices.csv"
+        if local_file.exists():
+            return pd.read_csv(local_file)
+
+        return pd.DataFrame(columns=[
+            "date", "gd", "gd_acumulado", "dmf_hours"
+        ])
+

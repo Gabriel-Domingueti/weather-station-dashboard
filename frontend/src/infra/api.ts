@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { DailySummary, DateRange, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo } from "@/domain/types";
+import type { DailySummary, DateRange, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo, AgroIndex } from "@/domain/types";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -36,5 +36,12 @@ export async function fetchMonthlyRecords(year?: number, month?: number): Promis
 
 export async function fetchTrend(): Promise<TrendInfo> {
   const { data } = await apiClient.get<TrendInfo>("/readings/trend");
+  return data;
+}
+
+export async function fetchAgroIndices(start?: string, end?: string): Promise<AgroIndex[]> {
+  const { data } = await apiClient.get<AgroIndex[]>("/readings/agro-indices", {
+    params: { start, end },
+  });
   return data;
 }

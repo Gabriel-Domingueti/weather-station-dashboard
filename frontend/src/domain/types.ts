@@ -52,3 +52,10 @@ export interface TrendInfo {
   pressure_change_hpa: number | null;
   rain_alert: boolean;
 }
+
+export interface AgroIndex {
+  date: string;
+  gd: number | null;
+  gd_acumulado: number | null;
+  dmf_hours: number | null;
+}

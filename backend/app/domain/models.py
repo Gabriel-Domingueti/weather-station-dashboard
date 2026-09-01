@@ -57,3 +57,9 @@ class TrendInfo(BaseModel):
     pressure: str
     pressure_change_hpa: float | None = None
     rain_alert: bool = False
+
+class AgroIndex(BaseModel):
+    date: str
+    gd: float | None = None
+    gd_acumulado: float | None = None
+    dmf_hours: float | None = None
