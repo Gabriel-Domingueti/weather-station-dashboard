@@ -1,7 +1,9 @@
 import { useLatestReading } from "@/application/hooks/useLatestReading";
 import { useTrend } from "@/application/hooks/useTrend";
+import { useMonthlyRecords } from "@/application/hooks/useMonthlyRecords";
 import { GaugeDial } from "@/ui/components/GaugeDial";
 import { TrendArrow } from "@/ui/components/TrendArrow";
+import { resolvePressureRange } from "@/ui/utils/pressureRange";
 
 interface GaugeConfig {
   key: "temperature" | "humidity" | "pressure";
@@ -42,6 +44,7 @@ const GAUGES: GaugeConfig[] = [
 export function CurrentConditionsCard() {
   const { data, isLoading, isError } = useLatestReading();
   const { data: trendData } = useTrend();
+  const { data: monthlyData } = useMonthlyRecords();
 
   if (isLoading) return <div className="card"><p className="status-message">Carregando condições atuais…</p></div>;
   if (isError || !data) return <div className="card"><p className="status-message status-message--error">Sem dados recentes da estação.</p></div>;
@@ -61,18 +64,28 @@ export function CurrentConditionsCard() {
         </div>
       )}
       <section className="gauge-grid">
-      {GAUGES.map((g) => (
-        <GaugeDial
-          key={g.key}
-          value={data.reading?.[g.key] ?? null}
-          min={g.min}
-          max={g.max}
-          unit={g.unit}
-          color={g.color}
-          label={g.label}
-          trendIndicator={trendData ? <TrendArrow trend={trendData[g.key]} /> : undefined}
-        />
-      ))}
+      {GAUGES.map((g) => {
+        let min = g.min;
+        let max = g.max;
+        if (g.key === "pressure") {
+          const pressureRange = resolvePressureRange(monthlyData?.pressure);
+          min = pressureRange.min;
+          max = pressureRange.max;
+        }
+
+        return (
+          <GaugeDial
+            key={g.key}
+            value={data.reading?.[g.key] ?? null}
+            min={min}
+            max={max}
+            unit={g.unit}
+            color={g.color}
+            label={g.label}
+            trendIndicator={trendData ? <TrendArrow trend={trendData[g.key]} /> : undefined}
+          />
+        );
+      })}
       </section>
     </div>
   );

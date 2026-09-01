@@ -48,10 +48,8 @@ def fetch_new_readings(since: datetime | None) -> pd.DataFrame:
     df = pd.DataFrame(feeds).rename(columns=FIELD_MAP)
 
     # O ThingSpeak devolve created_at com timezone (UTC, ex: "...Z").
-    # Os timestamps já salvos no CSV são naive (sem timezone). Normaliza
-    # aqui pra naive logo na entrada, senão a comparação com o checkpoint
-    # (`> since`) quebra com "Cannot compare tz-naive and tz-aware".
-    df["timestamp"] = pd.to_datetime(df["created_at"]).dt.tz_localize(None)
+    # Mantém timezone-aware.
+    df["timestamp"] = pd.to_datetime(df["created_at"])
 
     columns = ["timestamp", "temperature", "humidity", "pressure"]
     return df[columns].dropna(subset=["timestamp"])
@@ -68,7 +66,7 @@ def last_checkpoint() -> datetime | None:
     df = pd.read_csv(latest_file)
     if df.empty:
         return None
-    return pd.to_datetime(df["timestamp"]).max().to_pydatetime()
+    return pd.to_datetime(df["timestamp"], utc=True).max().to_pydatetime()
 
 
 def append_to_monthly_csv(df: pd.DataFrame) -> None:
@@ -82,7 +80,7 @@ def append_to_monthly_csv(df: pd.DataFrame) -> None:
 
         if file_path.exists():
             existing = pd.read_csv(file_path)
-            existing["timestamp"] = pd.to_datetime(existing["timestamp"])
+            existing["timestamp"] = pd.to_datetime(existing["timestamp"], utc=True)
             combined = pd.concat([existing, group]).drop_duplicates(subset=["timestamp"])
         else:
             combined = group
@@ -99,7 +97,7 @@ def rebuild_daily_summary() -> None:
         return
 
     all_readings = pd.concat([pd.read_csv(f) for f in csv_files], ignore_index=True)
-    all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"])
+    all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True)
     all_readings["date"] = all_readings["timestamp"].dt.date
 
     summary = all_readings.groupby("date").agg(

@@ -12,7 +12,7 @@ def sample_readings_df():
         {"timestamp": datetime(2026, 8, 2, 11, 0), "temperature": 22.0, "humidity": 65.0, "pressure": 1014.0},
     ]
     df = pd.DataFrame(data)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     return df
 
 @pytest.fixture

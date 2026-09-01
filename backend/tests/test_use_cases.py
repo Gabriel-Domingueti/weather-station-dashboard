@@ -110,6 +110,10 @@ async def test_get_historical_readings(sample_readings_df):
         assert getattr(r, "humidity", None) is None
         assert getattr(r, "pressure", None) is None
 
+    # Teste de serialização: garante que o offset é explícito
+    json_str = result[0].model_dump_json()
+    assert "+00:00" in json_str or "Z" in json_str
+
 def test_compute_staleness():
     now = datetime(2026, 8, 23, 12, 0, 0, tzinfo=timezone.utc)
     

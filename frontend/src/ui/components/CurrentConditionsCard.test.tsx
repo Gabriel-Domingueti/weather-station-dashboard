@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { CurrentConditionsCard } from "./CurrentConditionsCard";
 import * as hooks from "@/application/hooks/useLatestReading";
 import * as trendHooks from "@/application/hooks/useTrend";
+import * as monthlyHooks from "@/application/hooks/useMonthlyRecords";
 
 // Mock the component dependencies
 vi.mock("@/application/hooks/useLatestReading", () => ({
@@ -11,6 +12,10 @@ vi.mock("@/application/hooks/useLatestReading", () => ({
 
 vi.mock("@/application/hooks/useTrend", () => ({
   useTrend: vi.fn(),
+}));
+
+vi.mock("@/application/hooks/useMonthlyRecords", () => ({
+  useMonthlyRecords: vi.fn(),
 }));
 
 vi.mock("@/ui/components/GaugeDial", () => ({
@@ -30,6 +35,7 @@ describe("CurrentConditionsCard", () => {
     } as any);
 
     vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
+    vi.spyOn(monthlyHooks, "useMonthlyRecords").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
 
@@ -48,6 +54,7 @@ describe("CurrentConditionsCard", () => {
     } as any);
 
     vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
+    vi.spyOn(monthlyHooks, "useMonthlyRecords").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
 
@@ -66,6 +73,7 @@ describe("CurrentConditionsCard", () => {
     } as any);
 
     vi.spyOn(trendHooks, "useTrend").mockReturnValue({ data: undefined } as any);
+    vi.spyOn(monthlyHooks, "useMonthlyRecords").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
 
@@ -93,6 +101,7 @@ describe("CurrentConditionsCard", () => {
         rain_alert: true,
       },
     } as any);
+    vi.spyOn(monthlyHooks, "useMonthlyRecords").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
     expect(screen.getByText(/Pressão em queda/i)).toBeInTheDocument();
@@ -118,6 +127,7 @@ describe("CurrentConditionsCard", () => {
         rain_alert: false,
       },
     } as any);
+    vi.spyOn(monthlyHooks, "useMonthlyRecords").mockReturnValue({ data: undefined } as any);
 
     render(<CurrentConditionsCard />);
     expect(screen.queryByText(/Pressão em queda/i)).not.toBeInTheDocument();
