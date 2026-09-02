@@ -70,7 +70,7 @@ def last_checkpoint() -> datetime | None:
     df = pd.read_csv(latest_file)
     if df.empty:
         return None
-    return pd.to_datetime(df["timestamp"], utc=True).max().to_pydatetime()
+    return pd.to_datetime(df["timestamp"], utc=True, format="mixed").max().to_pydatetime()
 
 
 def append_to_monthly_csv(df: pd.DataFrame) -> None:
@@ -84,7 +84,7 @@ def append_to_monthly_csv(df: pd.DataFrame) -> None:
 
         if file_path.exists():
             existing = pd.read_csv(file_path)
-            existing["timestamp"] = pd.to_datetime(existing["timestamp"], utc=True)
+            existing["timestamp"] = pd.to_datetime(existing["timestamp"], utc=True, format="mixed")
             combined = pd.concat([existing, group]).drop_duplicates(subset=["timestamp"])
         else:
             combined = group
@@ -101,7 +101,7 @@ def rebuild_daily_summary() -> None:
         return
 
     all_readings = pd.concat([pd.read_csv(f) for f in csv_files], ignore_index=True)
-    all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True)
+    all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True, format="mixed")
     all_readings["date"] = all_readings["timestamp"].dt.date
 
     summary = all_readings.groupby("date").agg(
@@ -132,7 +132,7 @@ def calculate_daily_indices() -> None:
     csv_files = sorted(RAW_DIR.glob("*.csv"))
     if csv_files:
         all_readings = pd.concat([pd.read_csv(f) for f in csv_files], ignore_index=True)
-        all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True)
+        all_readings["timestamp"] = pd.to_datetime(all_readings["timestamp"], utc=True, format="mixed")
         all_readings["date"] = all_readings["timestamp"].dt.date.astype(str)
     else:
         all_readings = pd.DataFrame(columns=["timestamp", "humidity", "date"])

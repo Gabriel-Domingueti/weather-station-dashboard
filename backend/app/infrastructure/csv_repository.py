@@ -85,7 +85,7 @@ class CSVRepository:
             return pd.DataFrame(columns=["timestamp", "temperature", "humidity", "pressure"])
 
         df = pd.concat(frames, ignore_index=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="mixed")
         mask = (df["timestamp"].dt.date >= start) & (df["timestamp"].dt.date <= end)
         return df.loc[mask].sort_values("timestamp").reset_index(drop=True)
 
@@ -109,4 +109,3 @@ class CSVRepository:
         return pd.DataFrame(columns=[
             "date", "gd", "gd_acumulado", "dmf_hours"
         ])
-
