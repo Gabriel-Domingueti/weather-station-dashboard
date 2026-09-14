@@ -3,14 +3,14 @@ from datetime import datetime, timedelta
 from app.domain.agrometeorology import calculate_gd, calculate_dmf_hours
 
 def test_calculate_gd():
-    # Temp media > basal (25 e 15 => media 20. 20 - 10 = 10)
-    assert calculate_gd(25.0, 15.0, base_temp=10.0) == 10.0
+    # Temp media > basal (25 e 15 => media 20. 20 - 10.2 = 9.8)
+    assert calculate_gd(25.0, 15.0) == 9.8
     
-    # Temp media < basal (12 e 4 => media 8. 8 - 10 = -2 => retorna 0)
-    assert calculate_gd(12.0, 4.0, base_temp=10.0) == 0.0
+    # Temp media < basal (12 e 4 => media 8. 8 - 10.2 = -2.2 => retorna 0)
+    assert calculate_gd(12.0, 4.0) == 0.0
     
-    # Temp media == basal (12 e 8 => media 10. 10 - 10 = 0 => retorna 0)
-    assert calculate_gd(12.0, 8.0, base_temp=10.0) == 0.0
+    # Temp media == basal (12 e 8 => media 10. 10 - 10.2 = -0.2 => retorna 0)
+    assert calculate_gd(12.0, 8.0) == 0.0
 
 def test_calculate_dmf_hours():
     t0 = datetime(2026, 8, 1, 10, 0, 0)

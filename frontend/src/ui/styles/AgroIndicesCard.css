@@ -24,21 +24,4 @@
   font-weight: bold;
 }
 
-.provisional-warning {
-  display: flex;
-  gap: 0.5rem;
-  background-color: var(---color-border);
-  padding: 0.75rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  align-items: flex-start;
-}
 
-.provisional-warning span {
-  font-size: 1.125rem;
-}
-
-.provisional-warning p {
-  margin: 0;
-}

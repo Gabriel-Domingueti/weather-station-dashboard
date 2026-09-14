@@ -14,18 +14,7 @@ describe("AgroIndicesCard", () => {
       </QueryClientProvider>
     );
 
-  it("should show provisional warning regardless of data state", () => {
-    vi.spyOn(useAgroIndicesModule, "useAgroIndices").mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    } as any);
 
-    renderComponent();
-    expect(
-      screen.getByText(/Parâmetros de cálculo.*são provisórios/i)
-    ).toBeInTheDocument();
-  });
 
   it("should show 'sem dados de índices ainda' when data is empty", () => {
     vi.spyOn(useAgroIndicesModule, "useAgroIndices").mockReturnValue({

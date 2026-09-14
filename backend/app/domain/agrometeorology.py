@@ -1,10 +1,9 @@
 from datetime import datetime
 
-def calculate_gd(temp_max: float, temp_min: float, base_temp: float = 10.0) -> float:
+def calculate_gd(temp_max: float, temp_min: float, base_temp: float = 10.2) -> float:
     """
     Graus-Dia pelo método da média (Aparecido & Rolim, 2020).
-    base_temp=10.0 é um PLACEHOLDER — confirmar o valor real usado no
-    artigo de referência antes de qualquer uso científico dos dados.
+    Tbase = 10.2°C, conforme Aparecido (2019, Eq. 7), citando Carvalho et al. (2014), para o desenvolvimento vegetativo do cafeeiro.
     Nunca retorna negativo (sem acúmulo abaixo da temperatura basal).
     """
     if temp_max is None or temp_min is None:
@@ -23,8 +22,7 @@ def calculate_dmf_hours(readings: list[tuple[datetime, float]], threshold_pct: f
     consecutivas em que a umidade ficou >= threshold_pct — não assume
     intervalo fixo entre leituras, calcula pelo delta de tempo real
     entre pontos consecutivos que atendem à condição.
-    threshold_pct=90.0 é o valor de exemplo citado no plano de
-    pesquisa — confirmar com o coordenador antes de uso científico.
+    threshold_pct = 90.0 (UR >= 90%), conforme Sentelhas et al. (2008), calibrado para Piracicaba-SP, Brasil.
     """
     if not readings or len(readings) < 2:
         return 0.0

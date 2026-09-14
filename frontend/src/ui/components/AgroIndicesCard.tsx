@@ -36,12 +36,6 @@ export function AgroIndicesCard() {
     <div className="agro-indices-card card">
       <h2>Índices Agrometeorológicos</h2>
       {content}
-      <div className="provisional-warning">
-        <span>⚠️</span>
-        <p>
-          Parâmetros de cálculo (Temperatura Basal e Limiar de DMF) são provisórios, pendentes de validação científica.
-        </p>
-      </div>
     </div>
   );
 }
