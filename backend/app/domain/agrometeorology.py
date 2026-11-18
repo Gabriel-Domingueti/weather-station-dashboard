@@ -160,15 +160,16 @@ def calculate_coffee_rust_alert(
         thermal_factor = 0.05
 
     # Favorabilidade hídrica / molhamento foliar (mínimo de 6h para infecção segundo Pozza et al., 2021)
-    wetness_factor = min(1.0, dmf_avg_hours_7d / 6.0) * 0.6 + min(1.0, days_rh_above_80_15_30d / 10.0) * 0.4
-    env_favorability = thermal_factor * (0.35 + 0.65 * wetness_factor)
+    wetness_factor = min(1.0, dmf_avg_hours_7d / 6.0) * 0.65 + min(1.0, days_rh_above_80_15_30d / 10.0) * 0.35
+    env_favorability = thermal_factor * wetness_factor
 
     # Estimativa combinada de incidência (%) para os próximos 15 dias
+    # Pondera a curva fenológica regional pela favorabilidade microclimática de infecção (Kushalappa 1983; Pozza 2021)
     estimated_incidence = round(
-        (regional_base * 0.35 + 14.0 * env_favorability) * (0.5 + 0.5 * thermal_factor),
+        (regional_base * 0.45 + 16.0 * env_favorability) * env_favorability,
         2,
     )
-    if dmf_avg_hours_7d < 2.0 and days_rh_above_80_15_30d <= 2:
+    if dmf_avg_hours_7d < 2.5 and days_rh_above_80_15_30d <= 2:
         estimated_incidence = round(min(estimated_incidence, 1.8), 2)
 
     # Conversão para score (0-100) alinhado ao semáforo de Pozza et al. (2021):
@@ -460,12 +461,12 @@ def evaluate_all_phytosanitary_alerts(
     temp_avg_15_30 = _avg(window_15_30, "temperature_avg", temp_avg_recent)
     temp_max_15_30 = _avg(window_15_30, "temperature_max", 25.0)
     rh_avg_15_30 = _avg(window_15_30, "humidity_avg", 75.0)
-    days_rh80_15_30 = sum(1 for r in window_15_30 if float(r.get("humidity_avg") or 0.0) >= 78.0 or float(r.get("dmf_hours") or 0.0) >= 4.0)
+    days_rh80_15_30 = sum(1 for r in window_15_30 if float(r.get("humidity_avg") or 0.0) >= 80.0)
 
     temp_max_10d = _avg(last_10, "temperature_max", 25.0)
     temp_min_10d = _avg(last_10, "temperature_min", 14.0)
     rh_avg_10d = _avg(last_10, "humidity_avg", 70.0)
-    days_rh80_14d = sum(1 for r in last_14 if float(r.get("humidity_avg") or 0.0) >= 78.0 or float(r.get("dmf_hours") or 0.0) >= 4.0)
+    days_rh80_14d = sum(1 for r in last_14 if float(r.get("humidity_avg") or 0.0) >= 80.0)
     dry_days_14d = sum(1 for r in last_14 if float(r.get("dmf_hours") or 0.0) < 2.0 and float(r.get("humidity_avg") or 0.0) < 75.0)
 
     # Contagem de horas entre 15 e 20°C nos últimos 7 dias (Silva et al., 2025)

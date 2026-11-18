@@ -444,9 +444,10 @@ def write_records_And_rebuild(
 
 def populate_station_data(
     city_key: str = "varginha",
-    start_date: date = date(2026, 8, 1),
-    end_date: date = date(2026, 11, 17),
+    start_date: date = date(2025, 1, 1),
+    end_date: date = date(2025, 12, 31),
     replace_existing: bool = True,
+    strict_real: bool = False,
 ):
     """
     Coleta os dados do município escolhido (padrão: Varginha), grava nos CSVs mensais
@@ -459,6 +460,8 @@ def populate_station_data(
         try:
             data = fetch_city_weather(city_key=city_key, start_date=start_date, end_date=end_date)
         except Exception as exc:
+            if strict_real:
+                raise
             print(f"Aviso: API externa indisponível ({exc}). Usando série climatológica calibrada para {city_key}...")
             records = generate_climatological_fallback_records(
                 city_key=city_key, start_date=start_date, end_date=end_date
@@ -479,6 +482,8 @@ def populate_station_data(
     try:
         records = fetch_city_weather_records(city_key=city_key, start_date=start_date, end_date=end_date)
     except Exception as exc:
+        if strict_real:
+            raise
         print(f"Aviso: API externa indisponível ({exc}). Usando série climatológica calibrada para {city_key}...")
         records = generate_climatological_fallback_records(
             city_key=city_key, start_date=start_date, end_date=end_date
@@ -523,18 +528,23 @@ def main() -> None:
     )
     parser.add_argument(
         "--start",
-        default="2026-08-01",
-        help="Data inicial no formato YYYY-MM-DD (padrão: 2026-08-01)",
+        default="2025-01-01",
+        help="Data inicial no formato YYYY-MM-DD (padrão: 2025-01-01)",
     )
     parser.add_argument(
         "--end",
-        default="2026-11-17",
-        help="Data final no formato YYYY-MM-DD (padrão: 2026-11-17)",
+        default="2025-12-31",
+        help="Data final no formato YYYY-MM-DD (padrão: 2025-12-31)",
     )
     parser.add_argument(
         "--all-cities",
         action="store_true",
         help="Salva também planilhas individuais de todos os 10 municípios cafeeiros em data/sul_de_minas/",
+    )
+    parser.add_argument(
+        "--strict-real",
+        action="store_true",
+        help="Exige dados reais da API Open-Meteo (ECMWF/ERA5), falhando sem usar fallback sintético se não houver rede.",
     )
 
     args = parser.parse_args()
@@ -548,13 +558,20 @@ def main() -> None:
         f"de {start_dt} até {end_dt}..."
     )
 
-    populate_station_data(city_key=args.city, start_date=start_dt, end_date=end_dt)
+    populate_station_data(
+        city_key=args.city,
+        start_date=start_dt,
+        end_date=end_dt,
+        strict_real=args.strict_real,
+    )
 
     if args.all_cities:
         for key, info in SUL_DE_MINAS_CITIES.items():
             try:
                 recs = fetch_city_weather_records(key, start_dt, end_dt)
             except Exception:
+                if args.strict_real:
+                    raise
                 recs = generate_climatological_fallback_records(key, start_dt, end_dt)
             out_file = save_city_csv(key, recs, SUL_DE_MINAS_DIR)
             print(
