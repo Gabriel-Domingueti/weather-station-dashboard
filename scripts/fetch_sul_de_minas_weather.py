@@ -445,7 +445,7 @@ def write_records_And_rebuild(
 def populate_station_data(
     city_key: str = "varginha",
     start_date: date = date(2025, 1, 1),
-    end_date: date = date(2025, 12, 31),
+    end_date: date = date(2026, 11, 15),
     replace_existing: bool = True,
     strict_real: bool = False,
 ):
@@ -533,8 +533,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--end",
-        default="2025-12-31",
-        help="Data final no formato YYYY-MM-DD (padrão: 2025-12-31)",
+        default="2026-11-15",
+        help="Data final no formato YYYY-MM-DD (padrão: 2026-11-15)",
     )
     parser.add_argument(
         "--all-cities",
