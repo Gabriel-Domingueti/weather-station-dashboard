@@ -10,9 +10,19 @@ from app.application.use_cases import (
     GetMonthlyRecords,
     GetTrend,
     GetAgroIndices,
+    GetPhytosanitaryAlerts,
 )
 from app.config import settings
-from app.domain.models import DailySummary, MetricType, WeatherReading, LatestReadingResponse, MonthlyRecords, TrendInfo, AgroIndex
+from app.domain.models import (
+    DailySummary,
+    MetricType,
+    WeatherReading,
+    LatestReadingResponse,
+    MonthlyRecords,
+    TrendInfo,
+    AgroIndex,
+    PhytosanitaryReport,
+)
 from app.infrastructure.csv_repository import CSVRepository
 from app.infrastructure.thingspeak_client import ThingSpeakClient
 from datetime import datetime, timezone
@@ -120,3 +130,12 @@ async def get_agro_indices(
 ) -> list[AgroIndex]:
     use_case = GetAgroIndices(CSVRepository())
     return await use_case.execute(start, end)
+
+
+@router.get("/readings/phytosanitary-alerts", response_model=PhytosanitaryReport)
+async def get_phytosanitary_alerts(
+    target_date: date | None = Query(default=None),
+) -> PhytosanitaryReport:
+    use_case = GetPhytosanitaryAlerts(CSVRepository())
+    return await use_case.execute(target_date)
+

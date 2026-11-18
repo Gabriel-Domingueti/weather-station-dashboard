@@ -59,3 +59,37 @@ export interface AgroIndex {
   gd_acumulado: number | null;
   dmf_hours: number | null;
 }
+
+export type RiskLevel = "low" | "moderate" | "high";
+
+export interface CoffeePhenology {
+  nodes_per_branch: number;
+  leafiness_pct: number;
+}
+
+export interface PhytosanitaryAlertItem {
+  disease_key: string;
+  name: string;
+  scientific_name: string;
+  risk_level: RiskLevel;
+  status_label: string;
+  risk_score: number;
+  estimated_incidence_pct: number;
+  control_threshold_pct?: number | null;
+  audpc_index?: number | null;
+  germ_tube_length_um?: number | null;
+  favorable_conditions: string;
+  recommendation: string;
+  references: string[];
+}
+
+export interface PhytosanitaryReport {
+  reference_date: string | null;
+  region: string;
+  gd_acumulado: number;
+  dmf_last_24h: number;
+  dmf_last_48h: number;
+  phenology: CoffeePhenology;
+  alerts: PhytosanitaryAlertItem[];
+}
+

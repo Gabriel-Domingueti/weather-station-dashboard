@@ -1,0 +1,164 @@
+.phytosanitary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.phytosanitary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.phytosanitary-header h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.phytosanitary-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.phenology-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.phenology-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.phenology-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.phenology-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.alert-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  background: rgba(18, 24, 31, 0.55);
+}
+
+.alert-tile--high {
+  border-left: 4px solid #d9564b;
+}
+
+.alert-tile--moderate {
+  border-left: 4px solid #e8983d;
+}
+
+.alert-tile--low {
+  border-left: 4px solid #3fb885;
+}
+
+.alert-tile__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.alert-tile__title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.alert-tile__scientific {
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.risk-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.risk-badge--high {
+  background: rgba(217, 86, 75, 0.18);
+  color: #f28279;
+  border: 1px solid rgba(217, 86, 75, 0.4);
+}
+
+.risk-badge--moderate {
+  background: rgba(232, 152, 61, 0.18);
+  color: var(--color-temperature);
+  border: 1px solid rgba(232, 152, 61, 0.4);
+}
+
+.risk-badge--low {
+  background: rgba(63, 184, 133, 0.16);
+  color: #5cd6a0;
+  border: 1px solid rgba(63, 184, 133, 0.35);
+}
+
+.alert-tile__metrics {
+  display: flex;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.alert-tile__metric-label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  display: block;
+}
+
+.alert-tile__conditions {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.alert-tile__recommendation {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  line-height: 1.45;
+}
+
+.alert-tile__refs {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-top: auto;
+}

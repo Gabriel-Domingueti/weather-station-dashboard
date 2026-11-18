@@ -63,3 +63,35 @@ class AgroIndex(BaseModel):
     gd: float | None = None
     gd_acumulado: float | None = None
     dmf_hours: float | None = None
+
+
+class CoffeePhenology(BaseModel):
+    nodes_per_branch: float
+    leafiness_pct: float
+
+
+class PhytosanitaryAlertItem(BaseModel):
+    disease_key: str
+    name: str
+    scientific_name: str
+    risk_level: str  # "low" | "moderate" | "high"
+    status_label: str
+    risk_score: float
+    estimated_incidence_pct: float
+    control_threshold_pct: float | None = None
+    audpc_index: float | None = None
+    germ_tube_length_um: float | None = None
+    favorable_conditions: str
+    recommendation: str
+    references: list[str]
+
+
+class PhytosanitaryReport(BaseModel):
+    reference_date: str | None = None
+    region: str
+    gd_acumulado: float
+    dmf_last_24h: float
+    dmf_last_48h: float
+    phenology: CoffeePhenology
+    alerts: list[PhytosanitaryAlertItem]
+

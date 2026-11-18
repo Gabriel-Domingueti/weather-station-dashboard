@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend, compute_rain_alert, GetTrend, GetAgroIndices
+from app.application.use_cases import GetDailySummary, GetHistoricalReadings, compute_staleness, GetMonthlyRecords, compute_trend, compute_rain_alert, GetTrend, GetAgroIndices, GetPhytosanitaryAlerts
 from datetime import datetime, timedelta, timezone
 from app.domain.models import MetricType
 from app.core.cache import DataCache
@@ -285,3 +285,48 @@ async def test_get_agro_indices():
     use_case_empty = GetAgroIndices(MockEmptyCSVRepository())
     res_empty = await use_case_empty.execute(None, None)
     assert len(res_empty) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_phytosanitary_alerts():
+    class MockPhytosanitaryRepo:
+        async def fetch_daily_summary(self):
+            return pd.DataFrame([
+                {
+                    "date": "2026-10-15",
+                    "temperature_avg": 21.5,
+                    "temperature_min": 16.0,
+                    "temperature_max": 26.0,
+                    "humidity_avg": 84.0,
+                    "humidity_min": 65.0,
+                    "humidity_max": 96.0,
+                    "pressure_avg": 905.0,
+                    "pressure_min": 904.0,
+                    "pressure_max": 906.0,
+                }
+            ])
+
+        async def fetch_agro_indices(self):
+            return pd.DataFrame([
+                {
+                    "date": "2026-10-15",
+                    "gd": 10.8,
+                    "gd_acumulado": 450.0,
+                    "dmf_hours": 7.5,
+                }
+            ])
+
+        async def fetch_raw_range(self, start, end):
+            return pd.DataFrame([
+                {"timestamp": "2026-10-15T03:00:00Z", "temperature": 17.5, "humidity": 94.0, "pressure": 905.0},
+                {"timestamp": "2026-10-15T04:00:00Z", "temperature": 17.2, "humidity": 95.0, "pressure": 905.0},
+            ])
+
+    use_case = GetPhytosanitaryAlerts(MockPhytosanitaryRepo())
+    report = await use_case.execute()
+
+    assert report.reference_date == "2026-10-15"
+    assert report.gd_acumulado == 450.0
+    assert report.dmf_last_24h == 7.5
+    assert len(report.alerts) == 4
+    assert [a.disease_key for a in report.alerts] == ["coffee_rust", "phoma", "cercospora", "leaf_miner"]

@@ -5,6 +5,7 @@ import { DateRangeFilter } from "@/ui/components/DateRangeFilter";
 import { MetricSelector } from "@/ui/components/MetricSelector";
 import { WeatherChart } from "@/ui/components/WeatherChart";
 import { AgroIndicesCard } from "@/ui/components/AgroIndicesCard";
+import { PhytosanitaryAlertsCard } from "@/ui/components/PhytosanitaryAlertsCard";
 import { useLatestReading } from "@/application/hooks/useLatestReading";
 import { useHistoricalData } from "@/application/hooks/useHistoricalData";
 import type { DateRange, MetricType } from "@/domain/types";
@@ -44,6 +45,7 @@ export function Dashboard() {
       <div className="current-grid-row">
         <AgroIndicesCard />
       </div>
+      <PhytosanitaryAlertsCard />
       <MonthlyRecordsCard />
 
       <section className="historical-section">

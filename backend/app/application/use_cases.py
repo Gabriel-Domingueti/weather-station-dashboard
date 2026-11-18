@@ -3,7 +3,17 @@ from datetime import date
 import pandas as pd
 
 from app.core.cache import DataCache
-from app.domain.models import DailySummary, MetricType, WeatherReading, MonthlyRecords, MetricRecord, TrendInfo, AgroIndex
+from app.domain.agrometeorology import evaluate_all_phytosanitary_alerts
+from app.domain.models import (
+    DailySummary,
+    MetricType,
+    WeatherReading,
+    MonthlyRecords,
+    MetricRecord,
+    TrendInfo,
+    AgroIndex,
+    PhytosanitaryReport,
+)
 from app.infrastructure.csv_repository import CSVRepository
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.thingspeak_client import ThingSpeakClient
@@ -241,3 +251,56 @@ class GetAgroIndices:
         df = df.astype(object).where(pd.notnull(df), None)
 
         return [AgroIndex(**row) for row in df.to_dict(orient="records")]
+
+
+class GetPhytosanitaryAlerts:
+    """
+    Use case: combina o resumo diário (temperaturas, umidade, pressão) e os
+    índices agrometeorológicos (GD acumulado e DMF) com as leituras horárias
+    recentes para gerar o boletim de alerta de doenças e pragas do cafeeiro.
+    """
+
+    def __init__(self, repository: CSVRepository) -> None:
+        self._repository = repository
+
+    async def execute(self, target_date: date | None = None) -> PhytosanitaryReport:
+        summary_df = await self._repository.fetch_daily_summary()
+        indices_df = await self._repository.fetch_agro_indices()
+
+        if summary_df.empty or indices_df.empty:
+            report_dict = evaluate_all_phytosanitary_alerts(daily_rows=[], raw_readings=[])
+            return PhytosanitaryReport(**report_dict)
+
+        summary_df = summary_df.copy()
+        indices_df = indices_df.copy()
+        summary_df["date"] = summary_df["date"].astype(str)
+        indices_df["date"] = indices_df["date"].astype(str)
+
+        merged = pd.merge(summary_df, indices_df, on="date", how="inner")
+        if target_date is not None:
+            merged = merged[merged["date"] <= target_date.isoformat()]
+
+        if merged.empty:
+            report_dict = evaluate_all_phytosanitary_alerts(daily_rows=[], raw_readings=[])
+            return PhytosanitaryReport(**report_dict)
+
+        merged = merged.sort_values("date").reset_index(drop=True)
+        merged = merged.astype(object).where(pd.notnull(merged), None)
+        daily_rows = merged.to_dict(orient="records")
+
+        latest_date_str = str(daily_rows[-1]["date"])
+        end_dt = date.fromisoformat(latest_date_str)
+        start_dt = end_dt - timedelta(days=7)
+
+        raw_readings: list[dict] = []
+        if hasattr(self._repository, "fetch_raw_range"):
+            raw_df = await self._repository.fetch_raw_range(start_dt, end_dt)
+            if not raw_df.empty:
+                raw_df = raw_df.astype(object).where(pd.notnull(raw_df), None)
+                raw_readings = raw_df.to_dict(orient="records")
+
+        report_dict = evaluate_all_phytosanitary_alerts(
+            daily_rows=daily_rows,
+            raw_readings=raw_readings,
+        )
+        return PhytosanitaryReport(**report_dict)
