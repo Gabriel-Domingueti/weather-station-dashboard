@@ -1,8 +1,12 @@
 import { useMonthlyRecords } from "@/application/hooks/useMonthlyRecords";
 import type { MetricRecord } from "@/domain/types";
 
-export function MonthlyRecordsCard() {
-  const { data, isLoading, isError } = useMonthlyRecords();
+interface MonthlyRecordsCardProps {
+  city?: string;
+}
+
+export function MonthlyRecordsCard({ city }: MonthlyRecordsCardProps = {}) {
+  const { data, isLoading, isError } = useMonthlyRecords(undefined, undefined, city);
 
   if (isLoading) return <div className="card"><p className="status-message">Carregando recordes do mês…</p></div>;
   if (isError || !data) return <div className="card"><p className="status-message status-message--error">Sem recordes disponíveis.</p></div>;

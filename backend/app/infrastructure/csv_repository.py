@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 
@@ -9,6 +9,10 @@ import pandas as pd
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Cache em memória por chave de arquivo para evitar múltiplos downloads do GitHub Raw
+_CITY_DF_CACHE: dict[str, tuple[datetime, pd.DataFrame]] = {}
+_CACHE_TTL = timedelta(minutes=30)
 
 
 def clean_csv_content(raw_text: str) -> str:
@@ -34,7 +38,6 @@ def clean_csv_content(raw_text: str) -> str:
             header_seen = stripped
             cleaned.append(stripped)
         elif stripped == header_seen:
-            # Ignora linha de cabeçalho repetida no meio do arquivo
             continue
         else:
             cleaned.append(stripped)
@@ -63,11 +66,11 @@ def read_csv_safely(source_text_or_path: str | Path, is_path: bool = False) -> p
 class CSVRepository:
     """
     Porta de acesso aos dados históricos.
-    Busca do GitHub raw em produção, ou do diretório local data/ como fallback.
+    Busca do diretório local data/ quando disponível, ou do GitHub raw em produção.
     """
 
     def __init__(self, http_client: httpx.AsyncClient | None = None, data_dir: Path | None = None) -> None:
-        self._client = http_client or httpx.AsyncClient(timeout=15.0)
+        self._client = http_client or httpx.AsyncClient(timeout=20.0)
         self._data_dir = data_dir or self._resolve_data_dir()
 
     def _resolve_data_dir(self) -> Path:
@@ -185,12 +188,20 @@ class CSVRepository:
         cidade específica do Sul de Minas (data/sul_de_minas/{city_key}_daily.csv).
         """
         safe_key = city_key.strip().lower()
+        cache_key = f"daily:{safe_key}"
+        now = datetime.now(timezone.utc)
+        if cache_key in _CITY_DF_CACHE:
+            ts, cached_df = _CITY_DF_CACHE[cache_key]
+            if now - ts < _CACHE_TTL:
+                return cached_df.copy()
+
         local_daily = self._data_dir / "sul_de_minas" / f"{safe_key}_daily.csv"
         if local_daily.exists():
             try:
                 df = read_csv_safely(local_daily, is_path=True)
                 if not df.empty and "date" in df.columns:
-                    return df
+                    _CITY_DF_CACHE[cache_key] = (now, df)
+                    return df.copy()
             except Exception as e:
                 logger.warning("Falha ao ler %s local (%s)...", local_daily.name, e)
 
@@ -199,8 +210,55 @@ class CSVRepository:
             try:
                 df = await self._fetch_csv(url)
                 if not df.empty and "date" in df.columns:
-                    return df
+                    _CITY_DF_CACHE[cache_key] = (now, df)
+                    return df.copy()
             except Exception as e:
                 logger.warning("Falha ao buscar %s do GitHub (%s)...", url, e)
 
         return pd.DataFrame()
+
+    async def fetch_city_raw_data(self, city_key: str) -> pd.DataFrame:
+        """
+        Busca a série horária completa de uma cidade do Sul de Minas
+        (data/sul_de_minas/{city_key}.csv) com cache em memória.
+        """
+        safe_key = city_key.strip().lower()
+        cache_key = f"raw:{safe_key}"
+        now = datetime.now(timezone.utc)
+        if cache_key in _CITY_DF_CACHE:
+            ts, cached_df = _CITY_DF_CACHE[cache_key]
+            if now - ts < _CACHE_TTL:
+                return cached_df.copy()
+
+        local_raw = self._data_dir / "sul_de_minas" / f"{safe_key}.csv"
+        if local_raw.exists():
+            try:
+                df = read_csv_safely(local_raw, is_path=True)
+                if not df.empty and "timestamp" in df.columns:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="mixed")
+                    df = df.sort_values("timestamp").reset_index(drop=True)
+                    _CITY_DF_CACHE[cache_key] = (now, df)
+                    return df.copy()
+            except Exception as e:
+                logger.warning("Falha ao ler %s local (%s)...", local_raw.name, e)
+
+        if settings.github_owner != "seu-usuario":
+            url = f"{settings.raw_base_url}/sul_de_minas/{safe_key}.csv"
+            try:
+                df = await self._fetch_csv(url)
+                if not df.empty and "timestamp" in df.columns:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="mixed")
+                    df = df.sort_values("timestamp").reset_index(drop=True)
+                    _CITY_DF_CACHE[cache_key] = (now, df)
+                    return df.copy()
+            except Exception as e:
+                logger.warning("Falha ao buscar %s do GitHub (%s)...", url, e)
+
+        return pd.DataFrame(columns=["timestamp", "temperature", "humidity", "pressure"])
+
+    async def fetch_city_raw_range(self, city_key: str, start: date, end: date) -> pd.DataFrame:
+        df = await self.fetch_city_raw_data(city_key)
+        if df.empty:
+            return pd.DataFrame(columns=["timestamp", "temperature", "humidity", "pressure"])
+        mask = (df["timestamp"].dt.date >= start) & (df["timestamp"].dt.date <= end)
+        return df.loc[mask].sort_values("timestamp").reset_index(drop=True)

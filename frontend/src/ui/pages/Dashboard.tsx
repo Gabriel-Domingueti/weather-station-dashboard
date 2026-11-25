@@ -22,11 +22,12 @@ function toISODate(date: Date): string {
 }
 
 export function Dashboard() {
+  const [city, setCity] = useState<string>("varginha");
   const [range, setRange] = useState<DateRange>(last7Days());
   const [metric, setMetric] = useState<MetricType>("temperature");
 
-  const { data: latestData } = useLatestReading();
-  const { data, isLoading, isError } = useHistoricalData(range, metric);
+  const { data: latestData } = useLatestReading(city);
+  const { data, isLoading, isError } = useHistoricalData(range, metric, city);
 
   const lastUpdated = latestData?.reading?.timestamp
     ? new Date(latestData.reading.timestamp).toLocaleString("pt-BR")
@@ -41,12 +42,12 @@ export function Dashboard() {
         )}
       </header>
 
-      <CurrentConditionsCard />
+      <CurrentConditionsCard city={city} />
       <div className="current-grid-row">
-        <AgroIndicesCard />
+        <AgroIndicesCard city={city} />
       </div>
-      <PhytosanitaryAlertsCard />
-      <MonthlyRecordsCard />
+      <PhytosanitaryAlertsCard city={city} onCityChange={setCity} />
+      <MonthlyRecordsCard city={city} />
 
       <section className="historical-section">
         <DateRangeFilter value={range} onChange={setRange} />

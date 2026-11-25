@@ -15,20 +15,34 @@ export const SUL_DE_MINAS_CITIES = [
   { key: "santo_antonio_do_amparo", label: "Sto. Antônio do Amparo" },
 ] as const;
 
-export function PhytosanitaryAlertsCard() {
-  const [selectedCity, setSelectedCity] = useState<string>("varginha");
+interface PhytosanitaryAlertsCardProps {
+  city?: string;
+  onCityChange?: (city: string) => void;
+}
+
+export function PhytosanitaryAlertsCard({
+  city,
+  onCityChange,
+}: PhytosanitaryAlertsCardProps = {}) {
+  const [internalCity, setInternalCity] = useState<string>("varginha");
+  const selectedCity = city ?? internalCity;
+  const handleSelectCity = (newCity: string) => {
+    setInternalCity(newCity);
+    onCityChange?.(newCity);
+  };
+
   const { data, isLoading, isError } = usePhytosanitaryAlerts(selectedCity);
 
   const citySelector = (
     <div className="city-selector" role="group" aria-label="Selecionar cidade do Sul de Minas">
-      {SUL_DE_MINAS_CITIES.map((city) => (
+      {SUL_DE_MINAS_CITIES.map((c) => (
         <button
-          key={city.key}
+          key={c.key}
           type="button"
-          className={`city-selector__btn ${selectedCity === city.key ? "active" : ""}`}
-          onClick={() => setSelectedCity(city.key)}
+          className={`city-selector__btn ${selectedCity === c.key ? "active" : ""}`}
+          onClick={() => handleSelectCity(c.key)}
         >
-          {city.label}
+          {c.label}
         </button>
       ))}
     </div>

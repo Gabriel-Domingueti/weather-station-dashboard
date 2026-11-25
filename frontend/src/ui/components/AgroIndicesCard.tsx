@@ -1,8 +1,12 @@
 import { useAgroIndices } from "@/application/hooks/useAgroIndices";
 import "@/ui/styles/AgroIndicesCard.css";
 
-export function AgroIndicesCard() {
-  const { data, isLoading, isError } = useAgroIndices();
+interface AgroIndicesCardProps {
+  city?: string;
+}
+
+export function AgroIndicesCard({ city }: AgroIndicesCardProps = {}) {
+  const { data, isLoading, isError } = useAgroIndices(undefined, undefined, city);
 
   let content;
 

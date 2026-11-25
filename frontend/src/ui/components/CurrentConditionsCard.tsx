@@ -41,10 +41,14 @@ const GAUGES: GaugeConfig[] = [
   },
 ];
 
-export function CurrentConditionsCard() {
-  const { data, isLoading, isError } = useLatestReading();
-  const { data: trendData } = useTrend();
-  const { data: monthlyData } = useMonthlyRecords();
+interface CurrentConditionsCardProps {
+  city?: string;
+}
+
+export function CurrentConditionsCard({ city }: CurrentConditionsCardProps = {}) {
+  const { data, isLoading, isError } = useLatestReading(city);
+  const { data: trendData } = useTrend(city);
+  const { data: monthlyData } = useMonthlyRecords(undefined, undefined, city);
 
   if (isLoading) return <div className="card"><p className="status-message">Carregando condições atuais…</p></div>;
   if (isError || !data) return <div className="card"><p className="status-message status-message--error">Sem dados recentes da estação.</p></div>;

@@ -15,43 +15,52 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 export const apiClient = axios.create({ baseURL });
 
-export async function fetchLatestReading(): Promise<LatestReadingResponse> {
-  const { data } = await apiClient.get<LatestReadingResponse>("/readings/latest");
+export async function fetchLatestReading(city?: string): Promise<LatestReadingResponse> {
+  const { data } = await apiClient.get<LatestReadingResponse>("/readings/latest", {
+    params: city ? { city } : undefined,
+  });
   return data;
 }
 
-export async function fetchDailySummary(range?: DateRange): Promise<DailySummary[]> {
+export async function fetchDailySummary(range?: DateRange, city?: string): Promise<DailySummary[]> {
   const { data } = await apiClient.get<DailySummary[]>("/readings/daily-summary", {
-    params: range,
+    params: { ...range, ...(city ? { city } : {}) },
   });
   return data;
 }
 
 export async function fetchHistory(
   range: DateRange,
-  metric?: MetricType
+  metric?: MetricType,
+  city?: string
 ): Promise<WeatherReading[]> {
   const { data } = await apiClient.get<WeatherReading[]>("/readings/history", {
-    params: { ...range, metric },
+    params: { ...range, metric, ...(city ? { city } : {}) },
   });
   return data;
 }
 
-export async function fetchMonthlyRecords(year?: number, month?: number): Promise<MonthlyRecords> {
+export async function fetchMonthlyRecords(
+  year?: number,
+  month?: number,
+  city?: string
+): Promise<MonthlyRecords> {
   const { data } = await apiClient.get<MonthlyRecords>("/readings/monthly-records", {
-    params: { year, month },
+    params: { year, month, ...(city ? { city } : {}) },
   });
   return data;
 }
 
-export async function fetchTrend(): Promise<TrendInfo> {
-  const { data } = await apiClient.get<TrendInfo>("/readings/trend");
+export async function fetchTrend(city?: string): Promise<TrendInfo> {
+  const { data } = await apiClient.get<TrendInfo>("/readings/trend", {
+    params: city ? { city } : undefined,
+  });
   return data;
 }
 
 export async function fetchAgroIndices(start?: string, end?: string, city?: string): Promise<AgroIndex[]> {
   const { data } = await apiClient.get<AgroIndex[]>("/readings/agro-indices", {
-    params: { start, end, city },
+    params: { start, end, ...(city ? { city } : {}) },
   });
   return data;
 }
@@ -65,4 +74,3 @@ export async function fetchPhytosanitaryAlerts(
   });
   return data;
 }
-
