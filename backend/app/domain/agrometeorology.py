@@ -112,12 +112,26 @@ def calculate_phoma_audpc(temp_wetness_c: float, wetness_hours_48h: float) -> fl
 
 
 def _classify_risk_score(score: float) -> tuple[str, str]:
-    """Retorna (risk_level, status_label) no padrão de semáforo (Pozza et al., 2021)."""
+    """Retorna (risk_level, status_label) no padrão de semáforo simples para o produtor."""
     if score >= 65.0:
-        return "high", "Crítico (Muito Favorável)"
+        return "high", "Risco Alto"
     if score >= 35.0:
-        return "moderate", "Atenção (Favorável)"
-    return "low", "Baixo (Não Favorável)"
+        return "moderate", "Atenção"
+    return "low", "Risco Baixo"
+
+
+SUL_DE_MINAS_CITY_NAMES: dict[str, str] = {
+    "varginha": "Varginha",
+    "tres_pontas": "Três Pontas",
+    "muzambinho": "Muzambinho",
+    "boa_esperanca": "Boa Esperança",
+    "carmo_de_minas": "Carmo de Minas",
+    "guaxupe": "Guaxupé",
+    "alfenas": "Alfenas",
+    "nova_resende": "Nova Resende",
+    "carmo_do_rio_claro": "Carmo do Rio Claro",
+    "santo_antonio_do_amparo": "Santo Antônio do Amparo",
+}
 
 
 def calculate_coffee_rust_alert(
@@ -193,17 +207,21 @@ def calculate_coffee_rust_alert(
         "estimated_incidence_pct": estimated_incidence,
         "control_threshold_pct": 5.0,
         "favorable_conditions": (
-            f"Temp. média {temp_avg_15_30d:.1f}°C (ideal 20–25°C), "
-            f"DMF médio {dmf_avg_hours_7d:.1f}h/dia (crítico ≥6h) e "
-            f"{days_rh_above_80_15_30d} dias com UR ≥80%."
-        ),
-        "recommendation": (
-            "Alerta vermelho (incidência prevista ≥5% em 15 dias): realizar amostragem imediata no terço médio/inferior e avaliar controle com fungicida protetor/sistêmico (Pozza et al., 2021)."
+            "Temperaturas amenas para quentes com bastante umidade nas folhas."
             if risk_level == "high"
             else (
-                "Atenção (incidência estimada entre 3% e 5%): intensificar monitoramento quinzenal das folhas do 3º/4º nó e preparar logística de manejo."
+                "Umidade em elevação e temperatura favorável ao fungo."
                 if risk_level == "moderate"
-                else "Condições pouco favoráveis à infecção. Manter monitoramento de rotina sem necessidade de aplicação preventiva fora de época."
+                else "Clima pouco favorável para a ferrugem no momento."
+            )
+        ),
+        "recommendation": (
+            "Clima quente e folhas úmidas favorecem o fungo. Vistoriar a lavoura e avaliar necessidade de aplicação."
+            if risk_level == "high"
+            else (
+                "Umidade em elevação. Acompanhar as folhas na parte média da planta nos próximos dias."
+                if risk_level == "moderate"
+                else "Clima pouco favorável para a ferrugem no momento. Manter acompanhamento normal."
             )
         ),
         "references": ["Aparecido (2019)", "Pozza et al. (2021)", "Sentelhas et al. (2008)"],
@@ -260,17 +278,21 @@ def calculate_phoma_alert(
         "audpc_index": audpc,
         "germ_tube_length_um": germ_tube_um,
         "favorable_conditions": (
-            f"Temp. média {temp_avg_c:.1f}°C (ótimo 15–20°C), "
-            f"DMF 48h de {dmf_hours_48h:.1f}h (ótimo ≥36h, AACPD={audpc:.0f}) e "
-            f"{hours_temp_15_20_7d:.0f}h na faixa 15–20°C nos últimos 7 dias."
-        ),
-        "recommendation": (
-            "Condições ótimas para infecção por Phoma tarda (frio úmido + molhamento prolongado): inspecionar brotações novas, rosetas e avaliar proteção preventiva 2 semanas antes do pico (Silva et al., 2025)."
+            "Tempo mais frio combinado com folhas molhadas por muitas horas."
             if risk_level == "high"
             else (
-                "Favorabilidade moderada: monitorar talhões de maior altitude (>900m) e áreas expostas a vento frio e neblina."
+                "Noites frescas e úmidas com formação de orvalho nas folhas."
                 if risk_level == "moderate"
-                else "Temperaturas ou molhamento foliar fora da janela crítica de germinação da Phoma."
+                else "Clima atual não favorece o avanço da mancha-de-phoma."
+            )
+        ),
+        "recommendation": (
+            "Frio e muita umidade nas folhas. Vistoriar ponteiros, brotações novas e áreas mais sujeitas a vento frio."
+            if risk_level == "high"
+            else (
+                "Temperaturas amenas com folha úmida. Ficar atento aos talhões mais altos e áreas de baixada úmida."
+                if risk_level == "moderate"
+                else "Clima atual fora da faixa crítica para o avanço da mancha-de-Phoma."
             )
         ),
         "references": ["Lorenzetti et al. (2015)", "Silva et al. (2025)"],
@@ -328,17 +350,21 @@ def calculate_cercospora_alert(
         "risk_score": round(risk_score, 1),
         "estimated_incidence_pct": estimated_incidence,
         "favorable_conditions": (
-            f"Tmax média {temp_max_avg_10d:.1f}°C (germinação favorecida próxima a 30°C), "
-            f"{dry_days_14d} dias secos em 14d (UR média {rh_avg_10d:.1f}%) e "
-            f"ΣGD = {gd_acumulado:.0f}°C·dia."
-        ),
-        "recommendation": (
-            "Alta favorabilidade (Tmax elevada + déficit hídrico): monitorar folhas do terço médio e frutos em expansão; verificar equilíbrio nutricional (N/K) e necessidade de controle preventivo."
+            "Calor forte durante o dia aliado a tempo mais seco."
             if risk_level == "high"
             else (
-                "Favorabilidade moderada: acompanhar lavouras a pleno sol ou em solos mais arenosos sujeitos a estresse hídrico."
+                "Tardes quentes com períodos de menor umidade no ar."
                 if risk_level == "moderate"
-                else "Baixo risco ambiental para Cercosporiose no momento."
+                else "Condições climáticas normais, sem estresse para a planta."
+            )
+        ),
+        "recommendation": (
+            "Calor forte e tempo seco aumentam o risco. Observar folhas e frutos em formação na lavoura."
+            if risk_level == "high"
+            else (
+                "Dias quentes e mais secos. Acompanhar talhões mais expostos ao sol ou com solo mais seco."
+                if risk_level == "moderate"
+                else "Baixo risco ambiental para cercosporiose no momento."
             )
         ),
         "references": ["Aparecido (2019)"],
@@ -403,12 +429,12 @@ def calculate_leaf_miner_alert(
             f"Tmax {temp_max_avg_10d:.1f}°C / Tmin {temp_min_avg_10d:.1f}°C e ΣGD = {gd_acumulado:.0f}°C·dia."
         ),
         "recommendation": (
-            "Condições críticas de estiagem e calor (ciclo biológico acelerado): amostrar folhas do terço superior da copa para verificar minas ativas (nível de controle técnico: 20–30% no terço superior)."
+            "Tempo seco e quente acelera a praga. Vistoriar folhas na parte alta da planta para verificar minas."
             if risk_level == "high"
             else (
-                "Favorabilidade moderada ao bicho-mineiro: intensificar inspeção visual nas partes mais altas e ensolaradas da lavoura."
+                "Período com pouca chuva e calor. Observar a presença de folhas minadas no topo dos cafeeiros."
                 if risk_level == "moderate"
-                else "Período úmido/ameno reduz naturalmente a população adulta de Leucoptera coffeella."
+                else "Umidade atual ajuda a manter o bicho-mineiro sob controle natural."
             )
         ),
         "references": ["Aparecido (2019)"],

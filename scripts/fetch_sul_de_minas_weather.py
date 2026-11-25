@@ -197,17 +197,22 @@ def fetch_city_weather_records(
         "timezone": "UTC",
     }
 
-    if requests is not None:
-        response = requests.get(OPEN_METEO_ARCHIVE_URL, params=params, timeout=30)
-        response.raise_for_status()
-        payload = response.json()
-    else:
-        query_string = urllib.parse.urlencode(params)
-        url = f"{OPEN_METEO_ARCHIVE_URL}?{query_string}"
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-
-    return parse_open_meteo_records(payload)
+    last_err: Exception | None = None
+    for _attempt in range(3):
+        try:
+            if requests is not None:
+                response = requests.get(OPEN_METEO_ARCHIVE_URL, params=params, timeout=60)
+                response.raise_for_status()
+                payload = response.json()
+            else:
+                query_string = urllib.parse.urlencode(params)
+                url = f"{OPEN_METEO_ARCHIVE_URL}?{query_string}"
+                with urllib.request.urlopen(url, timeout=60) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+            return parse_open_meteo_records(payload)
+        except Exception as err:
+            last_err = err
+    raise RuntimeError(f"Falha ao baixar dados de {city_key}: {last_err}") from last_err
 
 
 def fetch_city_weather(
@@ -513,6 +518,87 @@ def save_city_csv(city_key: str, records: list[dict[str, Any]], out_dir: Path) -
                     r["pressure"],
                 ]
             )
+
+    # Também gera o arquivo diário pré-agregado ({city_key}_daily.csv) para troca instantânea de cidade no dashboard
+    by_day: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for rec in sorted(records, key=lambda r: r["timestamp"]):
+        by_day[rec["timestamp"].strftime("%Y-%m-%d")].append(rec)
+
+    daily_rows: list[dict[str, Any]] = []
+    gd_acumulado = 0.0
+    for day_str in sorted(by_day.keys()):
+        day_recs = by_day[day_str]
+        temps = [r["temperature"] for r in day_recs if r["temperature"] is not None]
+        hums = [r["humidity"] for r in day_recs if r["humidity"] is not None]
+        press = [r["pressure"] for r in day_recs if r["pressure"] is not None]
+
+        if not temps and not hums:
+            continue
+
+        t_avg = round(sum(temps) / len(temps), 2) if temps else None
+        t_min = round(min(temps), 2) if temps else None
+        t_max = round(max(temps), 2) if temps else None
+        h_avg = round(sum(hums) / len(hums), 2) if hums else None
+        h_min = round(min(hums), 2) if hums else None
+        h_max = round(max(hums), 2) if hums else None
+        p_avg = round(sum(press) / len(press), 2) if press else None
+        p_min = round(min(press), 2) if press else None
+        p_max = round(max(press), 2) if press else None
+
+        if day_str.endswith("-09-01") and len(daily_rows) > 0:
+            gd_acumulado = 0.0
+
+        gd = calculate_gd(t_max, t_min) if (t_max is not None and t_min is not None) else 0.0
+        gd_acumulado += gd
+
+        readings_tuples = [
+            (r["timestamp"], float(r["humidity"]))
+            for r in day_recs
+            if r["humidity"] is not None
+        ]
+        dmf_hours = calculate_dmf_hours(readings_tuples)
+
+        daily_rows.append(
+            {
+                "date": day_str,
+                "temperature_avg": t_avg,
+                "temperature_min": t_min,
+                "temperature_max": t_max,
+                "humidity_avg": h_avg,
+                "humidity_min": h_min,
+                "humidity_max": h_max,
+                "pressure_avg": p_avg,
+                "pressure_min": p_min,
+                "pressure_max": p_max,
+                "gd": round(gd, 2),
+                "gd_acumulado": round(gd_acumulado, 2),
+                "dmf_hours": round(dmf_hours, 2),
+            }
+        )
+
+    daily_file = out_dir / f"{city_key}_daily.csv"
+    with daily_file.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "date",
+                "temperature_avg",
+                "temperature_min",
+                "temperature_max",
+                "humidity_avg",
+                "humidity_min",
+                "humidity_max",
+                "pressure_avg",
+                "pressure_min",
+                "pressure_max",
+                "gd",
+                "gd_acumulado",
+                "dmf_hours",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(daily_rows)
+
     return out_file
 
 

@@ -127,15 +127,17 @@ async def get_trend() -> TrendInfo:
 async def get_agro_indices(
     start: date | None = Query(default=None),
     end: date | None = Query(default=None),
+    city: str | None = Query(default=None),
 ) -> list[AgroIndex]:
     use_case = GetAgroIndices(CSVRepository())
-    return await use_case.execute(start, end)
+    return await use_case.execute(start, end, city=city)
 
 
 @router.get("/readings/phytosanitary-alerts", response_model=PhytosanitaryReport)
 async def get_phytosanitary_alerts(
     target_date: date | None = Query(default=None),
+    city: str | None = Query(default="varginha"),
 ) -> PhytosanitaryReport:
     use_case = GetPhytosanitaryAlerts(CSVRepository())
-    return await use_case.execute(target_date)
+    return await use_case.execute(target_date=target_date, city=city)
 

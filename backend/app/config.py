@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     """Configurações da aplicação, lidas de variáveis de ambiente (.env)."""
 
     # GitHub - onde os CSVs gerados pelo GitHub Actions estão versionados
-    github_owner: str = "seu-usuario"
+    github_owner: str = "Gabriel-Domingueti"
     github_repo: str = "weather-station-dashboard"
     github_branch: str = "main"
 
@@ -19,7 +19,11 @@ class Settings(BaseSettings):
     stale_threshold_minutes: int = 30
 
     # CORS - origens permitidas a consumir a API (ajuste para o domínio do front em produção)
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "https://weather-station-frontend-9sqr.onrender.com",
+        "*",
+    ]
 
     # Diretório local de dados (para desenvolvimento local / container)
     local_data_dir: str = "/app/data"

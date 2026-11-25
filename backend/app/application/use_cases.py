@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 
 from app.core.cache import DataCache
-from app.domain.agrometeorology import evaluate_all_phytosanitary_alerts
+from app.domain.agrometeorology import evaluate_all_phytosanitary_alerts, SUL_DE_MINAS_CITY_NAMES
 from app.domain.models import (
     DailySummary,
     MetricType,
@@ -233,8 +233,17 @@ class GetAgroIndices:
     def __init__(self, repository: CSVRepository) -> None:
         self._repository = repository
 
-    async def execute(self, start: date | None, end: date | None) -> list[AgroIndex]:
-        df = await self._repository.fetch_agro_indices()
+    async def execute(
+        self, start: date | None, end: date | None, city: str | None = None
+    ) -> list[AgroIndex]:
+        df = pd.DataFrame()
+        if city and hasattr(self._repository, "fetch_city_daily_data"):
+            city_df = await self._repository.fetch_city_daily_data(city)
+            if not city_df.empty and {"date", "gd", "gd_acumulado", "dmf_hours"}.issubset(city_df.columns):
+                df = city_df[["date", "gd", "gd_acumulado", "dmf_hours"]].copy()
+
+        if df.empty:
+            df = await self._repository.fetch_agro_indices()
 
         if df.empty:
             return []
@@ -263,25 +272,43 @@ class GetPhytosanitaryAlerts:
     def __init__(self, repository: CSVRepository) -> None:
         self._repository = repository
 
-    async def execute(self, target_date: date | None = None) -> PhytosanitaryReport:
-        summary_df = await self._repository.fetch_daily_summary()
-        indices_df = await self._repository.fetch_agro_indices()
+    async def execute(
+        self, target_date: date | None = None, city: str | None = None
+    ) -> PhytosanitaryReport:
+        city_key = (city or "varginha").strip().lower()
+        city_label = SUL_DE_MINAS_CITY_NAMES.get(city_key, "Varginha")
+        region_name = f"Sul de Minas Gerais ({city_label})"
 
-        if summary_df.empty or indices_df.empty:
-            report_dict = evaluate_all_phytosanitary_alerts(daily_rows=[], raw_readings=[])
-            return PhytosanitaryReport(**report_dict)
+        merged = pd.DataFrame()
+        if hasattr(self._repository, "fetch_city_daily_data"):
+            city_df = await self._repository.fetch_city_daily_data(city_key)
+            if not city_df.empty and "date" in city_df.columns:
+                merged = city_df.copy()
 
-        summary_df = summary_df.copy()
-        indices_df = indices_df.copy()
-        summary_df["date"] = summary_df["date"].astype(str)
-        indices_df["date"] = indices_df["date"].astype(str)
+        if merged.empty:
+            summary_df = await self._repository.fetch_daily_summary()
+            indices_df = await self._repository.fetch_agro_indices()
 
-        merged = pd.merge(summary_df, indices_df, on="date", how="inner")
+            if summary_df.empty or indices_df.empty:
+                report_dict = evaluate_all_phytosanitary_alerts(
+                    daily_rows=[], raw_readings=[], region_name=region_name
+                )
+                return PhytosanitaryReport(**report_dict)
+
+            summary_df = summary_df.copy()
+            indices_df = indices_df.copy()
+            summary_df["date"] = summary_df["date"].astype(str)
+            indices_df["date"] = indices_df["date"].astype(str)
+            merged = pd.merge(summary_df, indices_df, on="date", how="inner")
+
+        merged["date"] = merged["date"].astype(str)
         if target_date is not None:
             merged = merged[merged["date"] <= target_date.isoformat()]
 
         if merged.empty:
-            report_dict = evaluate_all_phytosanitary_alerts(daily_rows=[], raw_readings=[])
+            report_dict = evaluate_all_phytosanitary_alerts(
+                daily_rows=[], raw_readings=[], region_name=region_name
+            )
             return PhytosanitaryReport(**report_dict)
 
         merged = merged.sort_values("date").reset_index(drop=True)
@@ -293,7 +320,7 @@ class GetPhytosanitaryAlerts:
         start_dt = end_dt - timedelta(days=7)
 
         raw_readings: list[dict] = []
-        if hasattr(self._repository, "fetch_raw_range"):
+        if city_key == "varginha" and hasattr(self._repository, "fetch_raw_range"):
             raw_df = await self._repository.fetch_raw_range(start_dt, end_dt)
             if not raw_df.empty:
                 raw_df = raw_df.astype(object).where(pd.notnull(raw_df), None)
@@ -302,5 +329,6 @@ class GetPhytosanitaryAlerts:
         report_dict = evaluate_all_phytosanitary_alerts(
             daily_rows=daily_rows,
             raw_readings=raw_readings,
+            region_name=region_name,
         )
         return PhytosanitaryReport(**report_dict)

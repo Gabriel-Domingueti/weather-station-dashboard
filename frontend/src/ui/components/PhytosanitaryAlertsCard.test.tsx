@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { PhytosanitaryAlertsCard } from "./PhytosanitaryAlertsCard";
 import * as usePhytosanitaryAlertsModule from "@/application/hooks/usePhytosanitaryAlerts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -33,10 +33,10 @@ describe("PhytosanitaryAlertsCard", () => {
     expect(screen.getByText(/sem dados suficientes para diagnóstico fitossanitário/i)).toBeInTheDocument();
   });
 
-  it("should render all 4 coffee disease/pest alerts with their risk levels and phenology", () => {
-    vi.spyOn(usePhytosanitaryAlertsModule, "usePhytosanitaryAlerts").mockReturnValue({
+  it("should render simple alerts without technical metrics and allow switching cities", () => {
+    const spy = vi.spyOn(usePhytosanitaryAlertsModule, "usePhytosanitaryAlerts").mockReturnValue({
       data: {
-        reference_date: "2026-11-17",
+        reference_date: "2026-11-24",
         region: "Sul de Minas Gerais (Varginha)",
         gd_acumulado: 845.2,
         dmf_last_24h: 7.0,
@@ -48,12 +48,12 @@ describe("PhytosanitaryAlertsCard", () => {
             name: "Ferrugem do Cafeeiro",
             scientific_name: "Hemileia vastatrix",
             risk_level: "high",
-            status_label: "Crítico (Muito Favorável)",
+            status_label: "Risco Alto",
             risk_score: 78.5,
             estimated_incidence_pct: 8.4,
             control_threshold_pct: 5.0,
             favorable_conditions: "Temp. média 22.1°C, DMF 7.0h",
-            recommendation: "Amostrar terço médio e inferior.",
+            recommendation: "Clima quente e folhas úmidas favorecem o fungo. Vistoriar a lavoura e avaliar necessidade de aplicação.",
             references: ["Aparecido (2019)", "Pozza et al. (2021)"],
           },
           {
@@ -61,13 +61,13 @@ describe("PhytosanitaryAlertsCard", () => {
             name: "Mancha-de-Phoma",
             scientific_name: "Phoma tarda",
             risk_level: "moderate",
-            status_label: "Atenção (Favorável)",
+            status_label: "Atenção",
             risk_score: 48.0,
             estimated_incidence_pct: 12.1,
             audpc_index: 165.4,
             germ_tube_length_um: 118.2,
             favorable_conditions: "Temp. 18.5°C, DMF 48h de 15.0h",
-            recommendation: "Monitorar brotações novas.",
+            recommendation: "Temperaturas amenas com folha úmida. Ficar atento aos talhões mais altos e áreas de baixada úmida.",
             references: ["Lorenzetti et al. (2015)", "Silva et al. (2025)"],
           },
         ],
@@ -80,10 +80,12 @@ describe("PhytosanitaryAlertsCard", () => {
 
     expect(screen.getByText("Ferrugem do Cafeeiro")).toBeInTheDocument();
     expect(screen.getByText("Mancha-de-Phoma")).toBeInTheDocument();
-    expect(screen.getByText("Crítico (Muito Favorável)")).toBeInTheDocument();
-    expect(screen.getByText("Atenção (Favorável)")).toBeInTheDocument();
-    expect(screen.getByText("8.4%")).toBeInTheDocument();
-    expect(screen.getByText("3.1 nós/ramo")).toBeInTheDocument();
-    expect(screen.getByText("98.4%")).toBeInTheDocument();
+    expect(screen.getByText("Risco Alto")).toBeInTheDocument();
+    expect(screen.getByText("Atenção")).toBeInTheDocument();
+
+    // Deve ter o botão para trocar de cidade (ex: Muzambinho)
+    const muzambinhoBtn = screen.getByRole("button", { name: "Muzambinho" });
+    fireEvent.click(muzambinhoBtn);
+    expect(spy).toHaveBeenLastCalledWith("muzambinho");
   });
 });

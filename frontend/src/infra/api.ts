@@ -49,16 +49,19 @@ export async function fetchTrend(): Promise<TrendInfo> {
   return data;
 }
 
-export async function fetchAgroIndices(start?: string, end?: string): Promise<AgroIndex[]> {
+export async function fetchAgroIndices(start?: string, end?: string, city?: string): Promise<AgroIndex[]> {
   const { data } = await apiClient.get<AgroIndex[]>("/readings/agro-indices", {
-    params: { start, end },
+    params: { start, end, city },
   });
   return data;
 }
 
-export async function fetchPhytosanitaryAlerts(targetDate?: string): Promise<PhytosanitaryReport> {
+export async function fetchPhytosanitaryAlerts(
+  city: string = "varginha",
+  targetDate?: string
+): Promise<PhytosanitaryReport> {
   const { data } = await apiClient.get<PhytosanitaryReport>("/readings/phytosanitary-alerts", {
-    params: { target_date: targetDate },
+    params: { city, target_date: targetDate },
   });
   return data;
 }

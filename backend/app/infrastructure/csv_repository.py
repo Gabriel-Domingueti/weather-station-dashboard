@@ -11,6 +11,55 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+def clean_csv_content(raw_text: str) -> str:
+    """
+    Remove marcadores de conflito de merge do Git (<<<<<<<, =======, >>>>>>>)
+    e cabeçalhos duplicados caso algum arquivo CSV tenha sofrido merge manual.
+    """
+    lines = raw_text.splitlines()
+    cleaned: list[str] = []
+    header_seen: str | None = None
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if (
+            stripped.startswith("<<<<<<<")
+            or stripped.startswith("=======")
+            or stripped.startswith(">>>>>>>")
+        ):
+            continue
+        if header_seen is None:
+            header_seen = stripped
+            cleaned.append(stripped)
+        elif stripped == header_seen:
+            # Ignora linha de cabeçalho repetida no meio do arquivo
+            continue
+        else:
+            cleaned.append(stripped)
+
+    return "\n".join(cleaned)
+
+
+def read_csv_safely(source_text_or_path: str | Path, is_path: bool = False) -> pd.DataFrame:
+    if is_path:
+        raw_text = Path(source_text_or_path).read_text(encoding="utf-8", errors="replace")
+    else:
+        raw_text = str(source_text_or_path)
+
+    cleaned = clean_csv_content(raw_text)
+    if not cleaned:
+        return pd.DataFrame()
+
+    df = pd.read_csv(StringIO(cleaned))
+    if "date" in df.columns:
+        df = df.drop_duplicates(subset=["date"], keep="last").sort_values("date").reset_index(drop=True)
+    elif "timestamp" in df.columns:
+        df = df.drop_duplicates(subset=["timestamp"], keep="last").reset_index(drop=True)
+    return df
+
+
 class CSVRepository:
     """
     Porta de acesso aos dados históricos.
@@ -25,23 +74,29 @@ class CSVRepository:
         custom_dir = Path(settings.local_data_dir)
         if custom_dir.exists():
             return custom_dir
-        # Check workspace root data dir
         root_data = Path(__file__).resolve().parent.parent.parent.parent / "data"
         if root_data.exists():
             return root_data
         return custom_dir
 
     async def fetch_daily_summary(self) -> pd.DataFrame:
+        local_file = self._data_dir / "aggregated" / "daily_summary.csv"
+        if local_file.exists():
+            try:
+                df = read_csv_safely(local_file, is_path=True)
+                if not df.empty and "date" in df.columns:
+                    return df
+            except Exception as e:
+                logger.warning("Falha ao ler daily_summary local (%s)...", e)
+
         if settings.github_owner != "seu-usuario":
             url = f"{settings.raw_base_url}/aggregated/daily_summary.csv"
             try:
-                return await self._fetch_csv(url)
+                df = await self._fetch_csv(url)
+                if not df.empty and "date" in df.columns:
+                    return df
             except Exception as e:
-                logger.warning("Falha ao buscar do GitHub (%s), tentando arquivo local...", e)
-
-        local_file = self._data_dir / "aggregated" / "daily_summary.csv"
-        if local_file.exists():
-            return pd.read_csv(local_file)
+                logger.warning("Falha ao buscar do GitHub (%s)...", e)
 
         return pd.DataFrame(columns=[
             "date", "temperature_avg", "temperature_min", "temperature_max",
@@ -50,16 +105,23 @@ class CSVRepository:
         ])
 
     async def fetch_raw_month(self, year: int, month: int) -> pd.DataFrame:
-        if settings.github_owner != "seu-usuario":
-            url = f"{settings.raw_base_url}/raw/{year:04d}-{month:02d}.csv"
+        local_file = self._data_dir / "raw" / f"{year:04d}-{month:02d}.csv"
+        if local_file.exists():
             try:
-                return await self._fetch_csv(url)
+                df = read_csv_safely(local_file, is_path=True)
+                if not df.empty and "timestamp" in df.columns:
+                    return df
             except Exception:
                 pass
 
-        local_file = self._data_dir / "raw" / f"{year:04d}-{month:02d}.csv"
-        if local_file.exists():
-            return pd.read_csv(local_file)
+        if settings.github_owner != "seu-usuario":
+            url = f"{settings.raw_base_url}/raw/{year:04d}-{month:02d}.csv"
+            try:
+                df = await self._fetch_csv(url)
+                if not df.empty and "timestamp" in df.columns:
+                    return df
+            except Exception:
+                pass
 
         return pd.DataFrame(columns=["timestamp", "temperature", "humidity", "pressure"])
 
@@ -92,20 +154,53 @@ class CSVRepository:
     async def _fetch_csv(self, url: str) -> pd.DataFrame:
         response = await self._client.get(url)
         response.raise_for_status()
-        return pd.read_csv(StringIO(response.text))
+        return read_csv_safely(response.text, is_path=False)
 
     async def fetch_agro_indices(self) -> pd.DataFrame:
+        local_file = self._data_dir / "aggregated" / "agrometeorological_indices.csv"
+        if local_file.exists():
+            try:
+                df = read_csv_safely(local_file, is_path=True)
+                if not df.empty and "date" in df.columns:
+                    return df
+            except Exception as e:
+                logger.warning("Falha ao ler agro_indices local (%s)...", e)
+
         if settings.github_owner != "seu-usuario":
             url = f"{settings.raw_base_url}/aggregated/agrometeorological_indices.csv"
             try:
-                return await self._fetch_csv(url)
+                df = await self._fetch_csv(url)
+                if not df.empty and "date" in df.columns:
+                    return df
             except Exception as e:
-                logger.warning("Falha ao buscar índices do GitHub (%s), tentando arquivo local...", e)
-
-        local_file = self._data_dir / "aggregated" / "agrometeorological_indices.csv"
-        if local_file.exists():
-            return pd.read_csv(local_file)
+                logger.warning("Falha ao buscar índices do GitHub (%s)...", e)
 
         return pd.DataFrame(columns=[
             "date", "gd", "gd_acumulado", "dmf_hours"
         ])
+
+    async def fetch_city_daily_data(self, city_key: str) -> pd.DataFrame:
+        """
+        Busca o resumo diário + índices agrometeorológicos pré-calculados de uma
+        cidade específica do Sul de Minas (data/sul_de_minas/{city_key}_daily.csv).
+        """
+        safe_key = city_key.strip().lower()
+        local_daily = self._data_dir / "sul_de_minas" / f"{safe_key}_daily.csv"
+        if local_daily.exists():
+            try:
+                df = read_csv_safely(local_daily, is_path=True)
+                if not df.empty and "date" in df.columns:
+                    return df
+            except Exception as e:
+                logger.warning("Falha ao ler %s local (%s)...", local_daily.name, e)
+
+        if settings.github_owner != "seu-usuario":
+            url = f"{settings.raw_base_url}/sul_de_minas/{safe_key}_daily.csv"
+            try:
+                df = await self._fetch_csv(url)
+                if not df.empty and "date" in df.columns:
+                    return df
+            except Exception as e:
+                logger.warning("Falha ao buscar %s do GitHub (%s)...", url, e)
+
+        return pd.DataFrame()
