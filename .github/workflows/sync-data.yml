@@ -25,11 +25,15 @@ jobs:
       - name: Install dependencies
         run: pip install pandas requests
 
-      - name: Run ETL
+      - name: Run ETL (Sul de Minas + Estação)
         env:
           THINGSPEAK_CHANNEL_ID: ${{ secrets.THINGSPEAK_CHANNEL_ID }}
           THINGSPEAK_READ_API_KEY: ${{ secrets.THINGSPEAK_READ_API_KEY }}
-        run: python scripts/sync_data.py
+        run: |
+          python scripts/fetch_sul_de_minas_weather.py --city varginha --start 2025-01-01 --all-cities --strict-real
+          if [ -n "$THINGSPEAK_CHANNEL_ID" ]; then
+            python scripts/sync_data.py || echo "Aviso: sync_data.py (ThingSpeak) não retornou novas leituras."
+          fi
 
       - name: Commit CSVs atualizados
         run: |

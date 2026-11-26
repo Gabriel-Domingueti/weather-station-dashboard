@@ -15,6 +15,11 @@ _CITY_DF_CACHE: dict[str, tuple[datetime, pd.DataFrame]] = {}
 _CACHE_TTL = timedelta(minutes=30)
 
 
+def clear_city_cache() -> None:
+    """Limpa o cache em memória de todas as cidades do Sul de Minas."""
+    _CITY_DF_CACHE.clear()
+
+
 def clean_csv_content(raw_text: str) -> str:
     """
     Remove marcadores de conflito de merge do Git (<<<<<<<, =======, >>>>>>>)

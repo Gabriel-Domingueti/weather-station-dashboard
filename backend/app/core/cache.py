@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from app.infrastructure.csv_repository import CSVRepository
+from app.infrastructure.csv_repository import CSVRepository, clear_city_cache
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class DataCache:
 
     async def refresh(self) -> None:
         logger.info("Atualizando cache de dados a partir do GitHub...")
+        clear_city_cache()
         self.daily_summary = await self._repository.fetch_daily_summary()
         self.last_refreshed = datetime.now(timezone.utc)
         logger.info("Cache atualizado: %s linhas", len(self.daily_summary))
